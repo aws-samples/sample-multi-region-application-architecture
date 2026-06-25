@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #0f172a;
+  --color-surface-card: #1e293b;
+  --color-surface-hover: #334155;
+  --color-accent: #38bdf8;
+  --color-accent-dim: #0ea5e9;
+  --color-status-green: #4ade80;
+  --color-status-yellow: #facc15;
+  --color-status-red: #f87171;
+  --color-status-orange: #fb923c;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Auth page fade-in animation */
+.auth-page {
+  animation: authFadeIn 300ms ease;
+}
+@keyframes authFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Login icon animations */
+.animate-icon-glow {
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
+  animation: iconGlow 3s ease-in-out infinite;
+}
+.animate-icon-star {
+  transform-origin: center;
+  animation: iconStar 4s ease-in-out infinite;
+}
+@keyframes iconGlow {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.3)); }
+  50% { filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.7)); }
+}
+@keyframes iconStar {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.1) rotate(15deg); opacity: 0.85; }
+}

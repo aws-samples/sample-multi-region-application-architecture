@@ -1,0 +1,5 @@
+# frontend/.env.example contains empty placeholder values, not real secrets
+5c86fe166aa9019048ed0c41983a4dce9b97acd5:frontend/.env.example:generic-api-key:5
+
+# airporthub-core/README.md reference (stale path from scan scope)
+88423ff29c5988e18057bddef0cc54840c12b2fa:airporthub-core/README.md:hashicorp-tf-password:128

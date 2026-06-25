@@ -1,0 +1,1647 @@
+openapi: 3.0.3
+info:
+  title: AirportHub API
+  description: |
+    Multi-region Airport Operations Dashboard API. Provides real-time flight data
+    (via FlightAware AeroAPI), crew management, and airport operations.
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: Relative to deployment (CloudFront or ALB origin)
+
+security:
+  - CognitoJWT: []
+
+tags:
+  - name: App
+    description: ECS Flask application endpoints (config, region info, health, stats)
+  - name: Airports
+    description: Airport CRUD operations (Lambda)
+  - name: Flights
+    description: Flight data and FlightAware integration (Lambda)
+  - name: Crew
+    description: Crew management - pilots, flight attendants, aircraft, assignments (Lambda)
+
+components:
+  securitySchemes:
+    CognitoJWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Amazon Cognito access token
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: "Resource not found"
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        region:
+          type: string
+          example: us-east-1
+        timestamp:
+          type: string
+          format: date-time
+
+    Airport:
+      type: object
+      required: [iata_code, name, city]
+      properties:
+        iata_code:
+          type: string
+          example: ATL
+        name:
+          type: string
+          example: Hartsfield-Jackson Atlanta International Airport
+        city:
+          type: string
+          example: Atlanta
+        country:
+          type: string
+          example: United States
+        country_name:
+          type: string
+          example: United States
+        country_iso2:
+          type: string
+          example: US
+        timezone:
+          type: string
+          example: America/New_York
+        latitude:
+          type: string
+          example: "33.6367"
+        longitude:
+          type: string
+          example: "-84.4281"
+        gmt:
+          type: string
+          example: "-5"
+        phone_number:
+          type: string
+          example: "+1-800-897-1910"
+        geoname_id:
+          type: string
+          example: "4180439"
+        city_iata_code:
+          type: string
+          example: ATL
+        icao_code:
+          type: string
+          example: KATL
+        enriched_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        updated_region:
+          type: string
+          example: us-east-1
+
+    Flight:
+      type: object
+      properties:
+        flight_number:
+          type: string
+          example: DL1234
+        airline:
+          type: string
+          example: Delta Air Lines
+        airline_code:
+          type: string
+          example: DAL
+        origin_iata:
+          type: string
+          example: ATL
+        destination_iata:
+          type: string
+          example: LAX
+        origin_city:
+          type: string
+          example: Atlanta
+        destination_city:
+          type: string
+          example: Los Angeles
+        departure_time:
+          type: string
+          format: date-time
+          example: "2026-05-22T08:30:00Z"
+        arrival_time:
+          type: string
+          format: date-time
+          example: "2026-05-22T11:45:00Z"
+        gate:
+          type: string
+          example: B22
+        terminal:
+          type: string
+          example: "2"
+        aircraft_type:
+          type: string
+          example: B737-800
+        status:
+          type: string
+          enum: [scheduled, boarding, departed, arrived, delayed, cancelled]
+          example: scheduled
+        fetched_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          example: flightaware
+
+    Pilot:
+      type: object
+      required: [employee_id, first_name, last_name, designation]
+      properties:
+        employee_id:
+          type: string
+          example: PIL-001
+        first_name:
+          type: string
+          example: James
+        last_name:
+          type: string
+          example: Mitchell
+        designation:
+          type: string
+          enum: [Captain, First Officer, Second Officer]
+          example: Captain
+        license_number:
+          type: string
+          example: ATP-2019-4521
+        date_of_hire:
+          type: string
+          example: "2019-03-15"
+        base_airport:
+          type: string
+          example: ATL
+        email:
+          type: string
+          example: j.mitchell@airporthub.com
+        phone:
+          type: string
+          example: "+1-555-0101"
+        qualifications:
+          type: object
+          properties:
+            type_ratings:
+              type: array
+              items:
+                type: string
+              example: [B737, B757, B767]
+            medical_certificate:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: Valid
+                expiry_date:
+                  type: string
+                  example: "2027-06-30"
+            total_flight_hours:
+              type: number
+              example: 12500
+            recent_90_day_hours:
+              type: number
+              example: 210
+        fatigue:
+          type: object
+          properties:
+            fatigue_risk_score:
+              type: number
+              example: 3.2
+            compliance_status:
+              type: string
+              enum: [GREEN, YELLOW, RED]
+              example: GREEN
+
+    FlightAttendant:
+      type: object
+      required: [employee_id, first_name, last_name, designation]
+      properties:
+        employee_id:
+          type: string
+          example: FA-001
+        first_name:
+          type: string
+          example: Sarah
+        last_name:
+          type: string
+          example: Johnson
+        designation:
+          type: string
+          enum: [Lead FA, Senior FA, FA]
+          example: Senior FA
+        certification_level:
+          type: string
+          example: Level 3
+        date_of_hire:
+          type: string
+          example: "2020-08-01"
+        base_airport:
+          type: string
+          example: ORD
+        languages:
+          type: array
+          items:
+            type: string
+          example: [English, Spanish, French]
+        fatigue:
+          type: object
+          properties:
+            fatigue_risk_score:
+              type: number
+              example: 2.8
+            compliance_status:
+              type: string
+              enum: [GREEN, YELLOW, RED]
+              example: GREEN
+
+    Aircraft:
+      type: object
+      required: [aircraft_type, category, seat_capacity]
+      properties:
+        aircraft_type:
+          type: string
+          example: B737-800
+        category:
+          type: string
+          example: Narrow-body
+        seat_capacity:
+          type: integer
+          example: 189
+        required_pilots:
+          type: integer
+          example: 2
+        required_fas:
+          type: integer
+          example: 4
+        max_range_hours:
+          type: number
+          example: 6.5
+
+    CrewAssignment:
+      type: object
+      properties:
+        flight_number:
+          type: string
+          example: DL1234
+        flight_date:
+          type: string
+          example: "2026-05-22"
+        aircraft_type:
+          type: string
+          example: B737-800
+        assigned_pilots:
+          type: array
+          items:
+            type: object
+            properties:
+              employee_id:
+                type: string
+                example: PIL-001
+              role:
+                type: string
+                example: Captain
+              compliance_status:
+                type: string
+                example: GREEN
+        assigned_fas:
+          type: array
+          items:
+            type: object
+            properties:
+              employee_id:
+                type: string
+                example: FA-001
+              role:
+                type: string
+                example: Lead FA
+              compliance_status:
+                type: string
+                example: GREEN
+        relief_crew:
+          type: boolean
+          example: false
+        total_crew:
+          type: integer
+          example: 6
+
+paths:
+  # ─── App Endpoints (ECS Flask) ───────────────────────────────────────
+  /api/config:
+    get:
+      tags: [App]
+      summary: Get runtime configuration
+      description: Returns Cognito pool/client IDs for frontend initialization.
+      security: []
+      responses:
+        '200':
+          description: Runtime config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cognitoUserPoolId:
+                    type: string
+                    example: us-east-1_AbCdEfGhI
+                  cognitoClientId:
+                    type: string
+                    example: 1a2b3c4d5e6f7g8h9i0j
+                  region:
+                    type: string
+                    example: us-east-1
+
+  /api/region-info:
+    get:
+      tags: [App]
+      summary: Get region and deployment status
+      description: Returns current region role and health. No-cache headers for failover detection.
+      responses:
+        '200':
+          description: Region info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    example: us-east-1
+                  role:
+                    type: string
+                    enum: [primary, passive]
+                    example: primary
+                  taskCount:
+                    type: integer
+                    example: 3
+                  status:
+                    type: string
+                    enum: [healthy, unhealthy]
+                    example: healthy
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/health:
+    get:
+      tags: [App]
+      summary: ALB health check
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                region: us-east-1
+                timestamp: "2026-05-22T08:00:00Z"
+        '503':
+          description: Unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: unhealthy
+                  error:
+                    type: string
+                    example: "Connection refused"
+                  region:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/stats:
+    get:
+      tags: [App]
+      summary: Get database statistics
+      responses:
+        '200':
+          description: Stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalAirports:
+                    type: integer
+                    example: 25
+                  connected:
+                    type: boolean
+                    example: true
+                  database:
+                    type: string
+                    example: airports
+                  collection:
+                    type: string
+                    example: airports
+                  region:
+                    type: string
+                    example: us-east-1
+                  lastUpdated:
+                    type: string
+                    format: date-time
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ─── Airport Endpoints (Lambda) ──────────────────────────────────────
+  /api/airports:
+    get:
+      tags: [Airports]
+      summary: List airports
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of airports to return
+      responses:
+        '200':
+          description: Airport list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 25
+                  region:
+                    type: string
+                    example: us-east-1
+                  timestamp:
+                    type: string
+                    format: date-time
+                  airports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Airport'
+              example:
+                count: 2
+                region: us-east-1
+                timestamp: "2026-05-22T08:00:00Z"
+                airports:
+                  - iata_code: ATL
+                    name: Hartsfield-Jackson Atlanta International Airport
+                    city: Atlanta
+                    country: United States
+                  - iata_code: LAX
+                    name: Los Angeles International Airport
+                    city: Los Angeles
+                    country: United States
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Airports]
+      summary: Create or update an airport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Airport'
+            example:
+              iata_code: DFW
+              name: Dallas/Fort Worth International Airport
+              city: Dallas
+              country: United States
+              timezone: America/Chicago
+      responses:
+        '200':
+          description: Airport created/updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  iata_code:
+                    type: string
+                    example: DFW
+                  modified:
+                    type: integer
+                    example: 0
+                  upserted:
+                    type: boolean
+                    example: true
+                  region:
+                    type: string
+                    example: us-east-1
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: Bad request (missing iata_code)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "IATA code required"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/airports/{iata_code}:
+    get:
+      tags: [Airports]
+      summary: Get a single airport
+      parameters:
+        - name: iata_code
+          in: path
+          required: true
+          schema:
+            type: string
+          example: ATL
+      responses:
+        '200':
+          description: Airport found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  airport:
+                    $ref: '#/components/schemas/Airport'
+                  region:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+              example:
+                airport:
+                  iata_code: ATL
+                  name: Hartsfield-Jackson Atlanta International Airport
+                  city: Atlanta
+                  country: United States
+                  icao_code: KATL
+                region: us-east-1
+                timestamp: "2026-05-22T08:00:00Z"
+        '404':
+          description: Airport not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Airport not found"
+                iata: XYZ
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ─── Flights Endpoints (Lambda) ──────────────────────────────────────
+  /flights:
+    get:
+      tags: [Flights]
+      summary: List flights
+      parameters:
+        - name: airport
+          in: query
+          schema:
+            type: string
+          description: Filter by IATA code (origin or destination)
+          example: ATL
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, boarding, departed, arrived, delayed, cancelled]
+          description: Filter by flight status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 300
+          description: Maximum flights to return
+      responses:
+        '200':
+          description: Flight list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flights:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Flight'
+                  count:
+                    type: integer
+                    example: 42
+                  fetched_at:
+                    type: string
+                    format: date-time
+                  timestamp:
+                    type: string
+                    format: date-time
+              example:
+                flights:
+                  - flight_number: DL1234
+                    airline: Delta Air Lines
+                    origin_iata: ATL
+                    destination_iata: LAX
+                    departure_time: "2026-05-22T08:30:00Z"
+                    arrival_time: "2026-05-22T11:45:00Z"
+                    status: scheduled
+                    gate: B22
+                    terminal: "2"
+                count: 1
+                fetched_at: "2026-05-22T06:00:00Z"
+                timestamp: "2026-05-22T08:00:00Z"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /flights/stats:
+    get:
+      tags: [Flights]
+      summary: Get flight statistics
+      responses:
+        '200':
+          description: Aggregated flight stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 156
+                  by_status:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    example:
+                      scheduled: 45
+                      departed: 38
+                      arrived: 52
+                      delayed: 15
+                      cancelled: 6
+                  busiest_airports:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        iata:
+                          type: string
+                        flight_count:
+                          type: integer
+                    example:
+                      - iata: ATL
+                        flight_count: 42
+                      - iata: ORD
+                        flight_count: 38
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /flights/seed:
+    post:
+      tags: [Flights]
+      summary: Seed mock flight data
+      description: Generates and stores mock flight data (fallback when FlightAware unavailable).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count:
+                  type: integer
+                  default: 300
+                  minimum: 1
+                  maximum: 1000
+            example:
+              count: 300
+      responses:
+        '200':
+          description: Flights seeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seeded:
+                    type: integer
+                    example: 300
+                  message:
+                    type: string
+                    example: "Successfully seeded 300 flights."
+        '400':
+          description: Not enough airports in database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Need at least 2 airports in the database. Populate airports first."
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /flights/refresh:
+    post:
+      tags: [Flights]
+      summary: Refresh live flight data from FlightAware
+      description: |
+        Fetches live flight data from FlightAware AeroAPI for all airports with ICAO codes.
+        Costs ~$0.02 per airport in API credits.
+      responses:
+        '200':
+          description: Flights refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  airports_processed:
+                    type: integer
+                    example: 25
+                  flights_fetched:
+                    type: integer
+                    example: 156
+                  cost_estimate:
+                    type: string
+                    example: "$0.50"
+                  fetched_at:
+                    type: string
+                    format: date-time
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                    example: []
+        '400':
+          description: No airports with ICAO codes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "No airports with ICAO codes. Run enrich_icao.py first."
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Database unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "DocDB unavailable after 3 attempts: connection timeout"
+
+  /health:
+    get:
+      tags: [Flights]
+      summary: Flights service health check
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                region: us-east-1
+                db_name: airports
+                timestamp: "2026-05-22T08:00:00Z"
+        '503':
+          description: Unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: unhealthy
+                  error:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  # ─── Crew Endpoints (Lambda) ─────────────────────────────────────────
+  /crew/pilots:
+    get:
+      tags: [Crew]
+      summary: List pilots
+      parameters:
+        - name: base_airport
+          in: query
+          schema:
+            type: string
+          description: Filter by base airport IATA code
+        - name: designation
+          in: query
+          schema:
+            type: string
+            enum: [Captain, First Officer, Second Officer]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 1000
+      responses:
+        '200':
+          description: Pilot list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pilot'
+                  count:
+                    type: integer
+                    example: 12
+                  total_count:
+                    type: integer
+                    example: 45
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Crew]
+      summary: Create a pilot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pilot'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Created successfully"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Request body required"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /crew/pilots/{employee_id}:
+    get:
+      tags: [Crew]
+      summary: Get a pilot
+      parameters:
+        - name: employee_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: PIL-001
+      responses:
+        '200':
+          description: Pilot found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pilot'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Not found: PIL-999"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Crew]
+      summary: Update a pilot
+      parameters:
+        - name: employee_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: PIL-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pilot'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Updated successfully"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Crew]
+      summary: Delete a pilot
+      parameters:
+        - name: employee_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: PIL-001
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Deleted successfully"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /crew/flight-attendants:
+    get:
+      tags: [Crew]
+      summary: List flight attendants
+      parameters:
+        - name: base_airport
+          in: query
+          schema:
+            type: string
+        - name: designation
+          in: query
+          schema:
+            type: string
+            enum: [Lead FA, Senior FA, FA]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 1000
+      responses:
+        '200':
+          description: Flight attendant list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FlightAttendant'
+                  count:
+                    type: integer
+                  total_count:
+                    type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Crew]
+      summary: Create a flight attendant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlightAttendant'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Created successfully"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /crew/flight-attendants/{employee_id}:
+    get:
+      tags: [Crew]
+      summary: Get a flight attendant
+      parameters:
+        - name: employee_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: FA-001
+      responses:
+        '200':
+          description: Flight attendant found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlightAttendant'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Crew]
+      summary: Update a flight attendant
+      parameters:
+        - name: employee_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: FA-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlightAttendant'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Updated successfully"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Crew]
+      summary: Delete a flight attendant
+      parameters:
+        - name: employee_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: FA-001
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Deleted successfully"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /crew/aircraft:
+    get:
+      tags: [Crew]
+      summary: List aircraft types
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by aircraft category
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 1000
+      responses:
+        '200':
+          description: Aircraft list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Aircraft'
+                  count:
+                    type: integer
+                  total_count:
+                    type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Crew]
+      summary: Create an aircraft type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Aircraft'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Created successfully"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /crew/aircraft/{aircraft_type}:
+    get:
+      tags: [Crew]
+      summary: Get an aircraft type
+      parameters:
+        - name: aircraft_type
+          in: path
+          required: true
+          schema:
+            type: string
+          example: B737-800
+      responses:
+        '200':
+          description: Aircraft found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aircraft'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Crew]
+      summary: Update an aircraft type
+      parameters:
+        - name: aircraft_type
+          in: path
+          required: true
+          schema:
+            type: string
+          example: B737-800
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Aircraft'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Updated successfully"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Crew]
+      summary: Delete an aircraft type
+      parameters:
+        - name: aircraft_type
+          in: path
+          required: true
+          schema:
+            type: string
+          example: B737-800
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Deleted successfully"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /crew/assignments:
+    get:
+      tags: [Crew]
+      summary: List crew assignments
+      parameters:
+        - name: flight_number
+          in: query
+          schema:
+            type: string
+          description: Filter by flight number
+        - name: flight_date
+          in: query
+          schema:
+            type: string
+          description: Filter by flight date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 1000
+      responses:
+        '200':
+          description: Assignment list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CrewAssignment'
+                  count:
+                    type: integer
+                  total_count:
+                    type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Crew]
+      summary: Create a crew assignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrewAssignment'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Created successfully"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /crew/assignments/{id}:
+    get:
+      tags: [Crew]
+      summary: Get a crew assignment
+      description: Lookup by ObjectId or flight_number.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: DL1234
+      responses:
+        '200':
+          description: Assignment found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrewAssignment'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Crew]
+      summary: Update a crew assignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: DL1234
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrewAssignment'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Updated successfully"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Crew]
+      summary: Delete a crew assignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: DL1234
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Deleted successfully"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /crew/health:
+    get:
+      tags: [Crew]
+      summary: Crew service health check
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: crew-service
+                  region:
+                    type: string
+                    example: us-east-1
+                  timestamp:
+                    type: string
+                    format: date-time
+        '503':
+          description: Unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: unhealthy
+                  error:
+                    type: string

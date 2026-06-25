@@ -1,0 +1,3 @@
+[bandit]
+# Exclude FlightAware reference/sample files - not deployed, stored for developer reference only
+exclude_dirs = data/FlightAware

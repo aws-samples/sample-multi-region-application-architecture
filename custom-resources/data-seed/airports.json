@@ -1,0 +1,22 @@
+[
+  {"iata_code": "ATL", "icao_code": "KATL", "name": "Hartsfield-Jackson Atlanta International Airport", "city": "Atlanta", "state": "GA", "country": "US", "latitude": 33.6407, "longitude": -84.4277, "timezone": "America/New_York"},
+  {"iata_code": "LAX", "icao_code": "KLAX", "name": "Los Angeles International Airport", "city": "Los Angeles", "state": "CA", "country": "US", "latitude": 33.9425, "longitude": -118.4081, "timezone": "America/Los_Angeles"},
+  {"iata_code": "ORD", "icao_code": "KORD", "name": "O'Hare International Airport", "city": "Chicago", "state": "IL", "country": "US", "latitude": 41.9742, "longitude": -87.9073, "timezone": "America/Chicago"},
+  {"iata_code": "DFW", "icao_code": "KDFW", "name": "Dallas/Fort Worth International Airport", "city": "Dallas", "state": "TX", "country": "US", "latitude": 32.8998, "longitude": -97.0403, "timezone": "America/Chicago"},
+  {"iata_code": "DEN", "icao_code": "KDEN", "name": "Denver International Airport", "city": "Denver", "state": "CO", "country": "US", "latitude": 39.8561, "longitude": -104.6737, "timezone": "America/Denver"},
+  {"iata_code": "JFK", "icao_code": "KJFK", "name": "John F. Kennedy International Airport", "city": "New York", "state": "NY", "country": "US", "latitude": 40.6413, "longitude": -73.7781, "timezone": "America/New_York"},
+  {"iata_code": "SFO", "icao_code": "KSFO", "name": "San Francisco International Airport", "city": "San Francisco", "state": "CA", "country": "US", "latitude": 37.6213, "longitude": -122.379, "timezone": "America/Los_Angeles"},
+  {"iata_code": "SEA", "icao_code": "KSEA", "name": "Seattle-Tacoma International Airport", "city": "Seattle", "state": "WA", "country": "US", "latitude": 47.4502, "longitude": -122.3088, "timezone": "America/Los_Angeles"},
+  {"iata_code": "LAS", "icao_code": "KLAS", "name": "Harry Reid International Airport", "city": "Las Vegas", "state": "NV", "country": "US", "latitude": 36.08, "longitude": -115.1522, "timezone": "America/Los_Angeles"},
+  {"iata_code": "MCO", "icao_code": "KMCO", "name": "Orlando International Airport", "city": "Orlando", "state": "FL", "country": "US", "latitude": 28.4312, "longitude": -81.308, "timezone": "America/New_York"},
+  {"iata_code": "EWR", "icao_code": "KEWR", "name": "Newark Liberty International Airport", "city": "Newark", "state": "NJ", "country": "US", "latitude": 40.6895, "longitude": -74.1745, "timezone": "America/New_York"},
+  {"iata_code": "CLT", "icao_code": "KCLT", "name": "Charlotte Douglas International Airport", "city": "Charlotte", "state": "NC", "country": "US", "latitude": 35.214, "longitude": -80.9431, "timezone": "America/New_York"},
+  {"iata_code": "PHX", "icao_code": "KPHX", "name": "Phoenix Sky Harbor International Airport", "city": "Phoenix", "state": "AZ", "country": "US", "latitude": 33.4373, "longitude": -112.0078, "timezone": "America/Phoenix"},
+  {"iata_code": "IAH", "icao_code": "KIAH", "name": "George Bush Intercontinental Airport", "city": "Houston", "state": "TX", "country": "US", "latitude": 29.9902, "longitude": -95.3368, "timezone": "America/Chicago"},
+  {"iata_code": "MIA", "icao_code": "KMIA", "name": "Miami International Airport", "city": "Miami", "state": "FL", "country": "US", "latitude": 25.7959, "longitude": -80.287, "timezone": "America/New_York"},
+  {"iata_code": "BOS", "icao_code": "KBOS", "name": "Boston Logan International Airport", "city": "Boston", "state": "MA", "country": "US", "latitude": 42.3656, "longitude": -71.0096, "timezone": "America/New_York"},
+  {"iata_code": "MSP", "icao_code": "KMSP", "name": "Minneapolis-Saint Paul International Airport", "city": "Minneapolis", "state": "MN", "country": "US", "latitude": 44.8848, "longitude": -93.2223, "timezone": "America/Chicago"},
+  {"iata_code": "DTW", "icao_code": "KDTW", "name": "Detroit Metropolitan Wayne County Airport", "city": "Detroit", "state": "MI", "country": "US", "latitude": 42.2124, "longitude": -83.3534, "timezone": "America/Detroit"},
+  {"iata_code": "FLL", "icao_code": "KFLL", "name": "Fort Lauderdale-Hollywood International Airport", "city": "Fort Lauderdale", "state": "FL", "country": "US", "latitude": 26.0726, "longitude": -80.1527, "timezone": "America/New_York"},
+  {"iata_code": "PHL", "icao_code": "KPHL", "name": "Philadelphia International Airport", "city": "Philadelphia", "state": "PA", "country": "US", "latitude": 39.8744, "longitude": -75.2424, "timezone": "America/New_York"}
+]

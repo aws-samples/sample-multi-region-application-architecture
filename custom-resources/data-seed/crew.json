@@ -1,0 +1,2016 @@
+{
+  "pilots": [
+    {
+      "employee_id": "P001",
+      "first_name": "James",
+      "last_name": "Mitchell",
+      "designation": "Captain",
+      "license_number": "ATP-44821",
+      "date_of_hire": "2012-03-15",
+      "base_airport": "ATL",
+      "email": "j.mitchell@example.com",
+      "phone": "+1-555-0101",
+      "qualifications": {
+        "type_ratings": [
+          "B737",
+          "B787"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-06-30"
+        },
+        "total_flight_hours": 12500,
+        "recent_90_day_hours": 210
+      },
+      "fatigue": {
+        "fatigue_risk_score": 18,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P002",
+      "first_name": "Sarah",
+      "last_name": "Chen",
+      "designation": "Captain",
+      "license_number": "ATP-51093",
+      "date_of_hire": "2014-07-22",
+      "base_airport": "LAX",
+      "email": "s.chen@example.com",
+      "phone": "+1-555-0102",
+      "qualifications": {
+        "type_ratings": [
+          "A320",
+          "A321"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-03-15"
+        },
+        "total_flight_hours": 10800,
+        "recent_90_day_hours": 195
+      },
+      "fatigue": {
+        "fatigue_risk_score": 22,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P003",
+      "first_name": "Robert",
+      "last_name": "Williams",
+      "designation": "First Officer",
+      "license_number": "ATP-62847",
+      "date_of_hire": "2018-01-10",
+      "base_airport": "JFK",
+      "email": "r.williams@example.com",
+      "phone": "+1-555-0103",
+      "qualifications": {
+        "type_ratings": [
+          "B787"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2026-12-01"
+        },
+        "total_flight_hours": 6200,
+        "recent_90_day_hours": 240
+      },
+      "fatigue": {
+        "fatigue_risk_score": 45,
+        "compliance_status": "YELLOW"
+      }
+    },
+    {
+      "employee_id": "P004",
+      "first_name": "Emily",
+      "last_name": "Nakamura",
+      "designation": "First Officer",
+      "license_number": "ATP-73156",
+      "date_of_hire": "2019-09-05",
+      "base_airport": "DFW",
+      "email": "e.nakamura@example.com",
+      "phone": "+1-555-0104",
+      "qualifications": {
+        "type_ratings": [
+          "B737",
+          "B737MAX"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-08-20"
+        },
+        "total_flight_hours": 4800,
+        "recent_90_day_hours": 185
+      },
+      "fatigue": {
+        "fatigue_risk_score": 12,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P005",
+      "first_name": "David",
+      "last_name": "Okafor",
+      "designation": "Second Officer",
+      "license_number": "ATP-84290",
+      "date_of_hire": "2021-06-14",
+      "base_airport": "SEA",
+      "email": "d.okafor@example.com",
+      "phone": "+1-555-0105",
+      "qualifications": {
+        "type_ratings": [
+          "A320"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-02-28"
+        },
+        "total_flight_hours": 2100,
+        "recent_90_day_hours": 160
+      },
+      "fatigue": {
+        "fatigue_risk_score": 65,
+        "compliance_status": "RED"
+      }
+    },
+    {
+      "employee_id": "P006",
+      "first_name": "Priya",
+      "last_name": "Sharma",
+      "designation": "Captain",
+      "license_number": "ATP-33017",
+      "date_of_hire": "2011-11-02",
+      "base_airport": "SFO",
+      "email": "p.sharma@example.com",
+      "phone": "+1-555-0106",
+      "qualifications": {
+        "type_ratings": [
+          "B777",
+          "B787"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-09-15"
+        },
+        "total_flight_hours": 14200,
+        "recent_90_day_hours": 180
+      },
+      "fatigue": {
+        "fatigue_risk_score": 20,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P007",
+      "first_name": "Michael",
+      "last_name": "Torres",
+      "designation": "Captain",
+      "license_number": "ATP-29584",
+      "date_of_hire": "2010-05-18",
+      "base_airport": "ORD",
+      "email": "m.torres@example.com",
+      "phone": "+1-555-0107",
+      "qualifications": {
+        "type_ratings": [
+          "B737",
+          "A320"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2026-11-30"
+        },
+        "total_flight_hours": 15800,
+        "recent_90_day_hours": 200
+      },
+      "fatigue": {
+        "fatigue_risk_score": 30,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P008",
+      "first_name": "Anna",
+      "last_name": "Kowalski",
+      "designation": "First Officer",
+      "license_number": "ATP-71432",
+      "date_of_hire": "2019-03-25",
+      "base_airport": "DEN",
+      "email": "a.kowalski@example.com",
+      "phone": "+1-555-0108",
+      "qualifications": {
+        "type_ratings": [
+          "A321"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-04-10"
+        },
+        "total_flight_hours": 4200,
+        "recent_90_day_hours": 220
+      },
+      "fatigue": {
+        "fatigue_risk_score": 38,
+        "compliance_status": "YELLOW"
+      }
+    },
+    {
+      "employee_id": "P009",
+      "first_name": "Hassan",
+      "last_name": "Al-Rashid",
+      "designation": "Captain",
+      "license_number": "ATP-40218",
+      "date_of_hire": "2013-08-12",
+      "base_airport": "IAH",
+      "email": "h.alrashid@example.com",
+      "phone": "+1-555-0109",
+      "qualifications": {
+        "type_ratings": [
+          "B787",
+          "A350"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-07-22"
+        },
+        "total_flight_hours": 11400,
+        "recent_90_day_hours": 175
+      },
+      "fatigue": {
+        "fatigue_risk_score": 15,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P010",
+      "first_name": "Lisa",
+      "last_name": "Johansson",
+      "designation": "First Officer",
+      "license_number": "ATP-68903",
+      "date_of_hire": "2020-01-08",
+      "base_airport": "MSP",
+      "email": "l.johansson@example.com",
+      "phone": "+1-555-0110",
+      "qualifications": {
+        "type_ratings": [
+          "B737"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-01-15"
+        },
+        "total_flight_hours": 3600,
+        "recent_90_day_hours": 250
+      },
+      "fatigue": {
+        "fatigue_risk_score": 58,
+        "compliance_status": "RED"
+      }
+    },
+    {
+      "employee_id": "P011",
+      "first_name": "Carlos",
+      "last_name": "Rivera",
+      "designation": "Captain",
+      "license_number": "ATP-37641",
+      "date_of_hire": "2012-09-30",
+      "base_airport": "MIA",
+      "email": "c.rivera@example.com",
+      "phone": "+1-555-0111",
+      "qualifications": {
+        "type_ratings": [
+          "A320",
+          "A321",
+          "A319"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-05-18"
+        },
+        "total_flight_hours": 13100,
+        "recent_90_day_hours": 190
+      },
+      "fatigue": {
+        "fatigue_risk_score": 25,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P012",
+      "first_name": "Jennifer",
+      "last_name": "Park",
+      "designation": "Second Officer",
+      "license_number": "ATP-89012",
+      "date_of_hire": "2022-04-11",
+      "base_airport": "BOS",
+      "email": "j.park@example.com",
+      "phone": "+1-555-0112",
+      "qualifications": {
+        "type_ratings": [
+          "B737"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-10-05"
+        },
+        "total_flight_hours": 1800,
+        "recent_90_day_hours": 145
+      },
+      "fatigue": {
+        "fatigue_risk_score": 10,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P013",
+      "first_name": "Wei",
+      "last_name": "Zhang",
+      "designation": "First Officer",
+      "license_number": "ATP-75384",
+      "date_of_hire": "2017-12-03",
+      "base_airport": "LAX",
+      "email": "w.zhang@example.com",
+      "phone": "+1-555-0113",
+      "qualifications": {
+        "type_ratings": [
+          "B777",
+          "B787"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2026-09-20"
+        },
+        "total_flight_hours": 7500,
+        "recent_90_day_hours": 205
+      },
+      "fatigue": {
+        "fatigue_risk_score": 32,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P014",
+      "first_name": "Fatima",
+      "last_name": "Hassan",
+      "designation": "Captain",
+      "license_number": "ATP-42567",
+      "date_of_hire": "2015-02-28",
+      "base_airport": "EWR",
+      "email": "f.hassan@example.com",
+      "phone": "+1-555-0114",
+      "qualifications": {
+        "type_ratings": [
+          "A320",
+          "B737"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-08-12"
+        },
+        "total_flight_hours": 9800,
+        "recent_90_day_hours": 170
+      },
+      "fatigue": {
+        "fatigue_risk_score": 19,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P015",
+      "first_name": "Kevin",
+      "last_name": "O'Brien",
+      "designation": "First Officer",
+      "license_number": "ATP-66291",
+      "date_of_hire": "2020-07-19",
+      "base_airport": "PHX",
+      "email": "k.obrien@example.com",
+      "phone": "+1-555-0115",
+      "qualifications": {
+        "type_ratings": [
+          "A321"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-03-30"
+        },
+        "total_flight_hours": 3200,
+        "recent_90_day_hours": 230
+      },
+      "fatigue": {
+        "fatigue_risk_score": 48,
+        "compliance_status": "YELLOW"
+      }
+    },
+    {
+      "employee_id": "P016",
+      "first_name": "Olga",
+      "last_name": "Petrov",
+      "designation": "Captain",
+      "license_number": "ATP-31845",
+      "date_of_hire": "2009-06-22",
+      "base_airport": "JFK",
+      "email": "o.petrov@example.com",
+      "phone": "+1-555-0116",
+      "qualifications": {
+        "type_ratings": [
+          "B777",
+          "B787",
+          "A350"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-11-01"
+        },
+        "total_flight_hours": 18200,
+        "recent_90_day_hours": 165
+      },
+      "fatigue": {
+        "fatigue_risk_score": 14,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P017",
+      "first_name": "Marcus",
+      "last_name": "Johnson",
+      "designation": "Second Officer",
+      "license_number": "ATP-91734",
+      "date_of_hire": "2023-01-16",
+      "base_airport": "CLT",
+      "email": "m.johnson@example.com",
+      "phone": "+1-555-0117",
+      "qualifications": {
+        "type_ratings": [
+          "A320"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-06-15"
+        },
+        "total_flight_hours": 1200,
+        "recent_90_day_hours": 130
+      },
+      "fatigue": {
+        "fatigue_risk_score": 8,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P018",
+      "first_name": "Sofia",
+      "last_name": "Andersson",
+      "designation": "First Officer",
+      "license_number": "ATP-78456",
+      "date_of_hire": "2018-10-07",
+      "base_airport": "SEA",
+      "email": "s.andersson@example.com",
+      "phone": "+1-555-0118",
+      "qualifications": {
+        "type_ratings": [
+          "B737",
+          "B737MAX"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-02-10"
+        },
+        "total_flight_hours": 5600,
+        "recent_90_day_hours": 215
+      },
+      "fatigue": {
+        "fatigue_risk_score": 40,
+        "compliance_status": "YELLOW"
+      }
+    },
+    {
+      "employee_id": "P019",
+      "first_name": "Ahmed",
+      "last_name": "Ibrahim",
+      "designation": "Captain",
+      "license_number": "ATP-35672",
+      "date_of_hire": "2011-04-09",
+      "base_airport": "ATL",
+      "email": "a.ibrahim@example.com",
+      "phone": "+1-555-0119",
+      "qualifications": {
+        "type_ratings": [
+          "B737",
+          "A320",
+          "B787"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-04-25"
+        },
+        "total_flight_hours": 14800,
+        "recent_90_day_hours": 188
+      },
+      "fatigue": {
+        "fatigue_risk_score": 21,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "P020",
+      "first_name": "Rachel",
+      "last_name": "Kim",
+      "designation": "First Officer",
+      "license_number": "ATP-82103",
+      "date_of_hire": "2021-03-22",
+      "base_airport": "SFO",
+      "email": "r.kim@example.com",
+      "phone": "+1-555-0120",
+      "qualifications": {
+        "type_ratings": [
+          "A320"
+        ],
+        "medical_certificate": {
+          "status": "valid",
+          "expiry_date": "2027-07-08"
+        },
+        "total_flight_hours": 2800,
+        "recent_90_day_hours": 195
+      },
+      "fatigue": {
+        "fatigue_risk_score": 27,
+        "compliance_status": "GREEN"
+      }
+    }
+  ],
+  "flight_attendants": [
+    {
+      "employee_id": "FA001",
+      "first_name": "Maria",
+      "last_name": "Garcia",
+      "designation": "Lead FA",
+      "certification_level": "L3",
+      "date_of_hire": "2013-04-20",
+      "base_airport": "ATL",
+      "languages": [
+        "English",
+        "Spanish"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 15,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA002",
+      "first_name": "Aisha",
+      "last_name": "Patel",
+      "designation": "Senior FA",
+      "certification_level": "L2",
+      "date_of_hire": "2016-11-08",
+      "base_airport": "LAX",
+      "languages": [
+        "English",
+        "Hindi",
+        "Gujarati"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 28,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA003",
+      "first_name": "Thomas",
+      "last_name": "Andersen",
+      "designation": "Senior FA",
+      "certification_level": "L2",
+      "date_of_hire": "2017-05-30",
+      "base_airport": "JFK",
+      "languages": [
+        "English",
+        "Norwegian",
+        "Swedish"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 42,
+        "compliance_status": "YELLOW"
+      }
+    },
+    {
+      "employee_id": "FA004",
+      "first_name": "Yuki",
+      "last_name": "Tanaka",
+      "designation": "FA",
+      "certification_level": "L1",
+      "date_of_hire": "2020-02-14",
+      "base_airport": "SFO",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 10,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA005",
+      "first_name": "Lucas",
+      "last_name": "Moreau",
+      "designation": "FA",
+      "certification_level": "L1",
+      "date_of_hire": "2022-08-01",
+      "base_airport": "DEN",
+      "languages": [
+        "English",
+        "French"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 55,
+        "compliance_status": "RED"
+      }
+    },
+    {
+      "employee_id": "FA006",
+      "first_name": "Nina",
+      "last_name": "Volkov",
+      "designation": "Lead FA",
+      "certification_level": "L3",
+      "date_of_hire": "2012-06-15",
+      "base_airport": "ORD",
+      "languages": [
+        "English",
+        "Russian"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 17,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA007",
+      "first_name": "Daniel",
+      "last_name": "Santos",
+      "designation": "Senior FA",
+      "certification_level": "L2",
+      "date_of_hire": "2015-09-22",
+      "base_airport": "MIA",
+      "languages": [
+        "English",
+        "Portuguese",
+        "Spanish"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 33,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA008",
+      "first_name": "Mei",
+      "last_name": "Lin",
+      "designation": "FA",
+      "certification_level": "L1",
+      "date_of_hire": "2021-01-10",
+      "base_airport": "LAX",
+      "languages": [
+        "English",
+        "Mandarin",
+        "Cantonese"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 12,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA009",
+      "first_name": "Patrick",
+      "last_name": "Murphy",
+      "designation": "Senior FA",
+      "certification_level": "L2",
+      "date_of_hire": "2014-03-18",
+      "base_airport": "BOS",
+      "languages": [
+        "English",
+        "Irish"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 50,
+        "compliance_status": "YELLOW"
+      }
+    },
+    {
+      "employee_id": "FA010",
+      "first_name": "Amara",
+      "last_name": "Diallo",
+      "designation": "Lead FA",
+      "certification_level": "L3",
+      "date_of_hire": "2011-08-05",
+      "base_airport": "DFW",
+      "languages": [
+        "English",
+        "French",
+        "Wolof"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 20,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA011",
+      "first_name": "Erik",
+      "last_name": "Lindqvist",
+      "designation": "FA",
+      "certification_level": "L1",
+      "date_of_hire": "2022-05-12",
+      "base_airport": "SEA",
+      "languages": [
+        "English",
+        "Swedish"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 8,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA012",
+      "first_name": "Isabella",
+      "last_name": "Romano",
+      "designation": "Senior FA",
+      "certification_level": "L2",
+      "date_of_hire": "2016-07-28",
+      "base_airport": "EWR",
+      "languages": [
+        "English",
+        "Italian"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 36,
+        "compliance_status": "YELLOW"
+      }
+    },
+    {
+      "employee_id": "FA013",
+      "first_name": "Kenji",
+      "last_name": "Watanabe",
+      "designation": "FA",
+      "certification_level": "L1",
+      "date_of_hire": "2021-09-03",
+      "base_airport": "SFO",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 14,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA014",
+      "first_name": "Grace",
+      "last_name": "Okonkwo",
+      "designation": "Lead FA",
+      "certification_level": "L3",
+      "date_of_hire": "2010-12-01",
+      "base_airport": "IAH",
+      "languages": [
+        "English",
+        "Igbo",
+        "French"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 22,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA015",
+      "first_name": "Alejandro",
+      "last_name": "Mendez",
+      "designation": "Senior FA",
+      "certification_level": "L2",
+      "date_of_hire": "2018-02-14",
+      "base_airport": "PHX",
+      "languages": [
+        "English",
+        "Spanish"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 40,
+        "compliance_status": "YELLOW"
+      }
+    },
+    {
+      "employee_id": "FA016",
+      "first_name": "Sophie",
+      "last_name": "Dubois",
+      "designation": "FA",
+      "certification_level": "L1",
+      "date_of_hire": "2023-03-20",
+      "base_airport": "ATL",
+      "languages": [
+        "English",
+        "French"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 6,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA017",
+      "first_name": "Raj",
+      "last_name": "Krishnan",
+      "designation": "Senior FA",
+      "certification_level": "L2",
+      "date_of_hire": "2015-10-15",
+      "base_airport": "JFK",
+      "languages": [
+        "English",
+        "Hindi",
+        "Tamil"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 29,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA018",
+      "first_name": "Hannah",
+      "last_name": "Fischer",
+      "designation": "FA",
+      "certification_level": "L1",
+      "date_of_hire": "2022-11-28",
+      "base_airport": "MSP",
+      "languages": [
+        "English",
+        "German"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 11,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA019",
+      "first_name": "Omar",
+      "last_name": "Khalil",
+      "designation": "Lead FA",
+      "certification_level": "L3",
+      "date_of_hire": "2013-01-07",
+      "base_airport": "CLT",
+      "languages": [
+        "English",
+        "Arabic"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 18,
+        "compliance_status": "GREEN"
+      }
+    },
+    {
+      "employee_id": "FA020",
+      "first_name": "Chloe",
+      "last_name": "Bennett",
+      "designation": "FA",
+      "certification_level": "L1",
+      "date_of_hire": "2023-06-15",
+      "base_airport": "DEN",
+      "languages": [
+        "English"
+      ],
+      "fatigue": {
+        "fatigue_risk_score": 62,
+        "compliance_status": "RED"
+      }
+    }
+  ],
+  "aircraft": [
+    {
+      "aircraft_type": "Boeing 737-800",
+      "category": "Narrow-body",
+      "seat_capacity": 189,
+      "required_pilots": 2,
+      "required_fas": 4,
+      "max_range_hours": 6
+    },
+    {
+      "aircraft_type": "Airbus A320neo",
+      "category": "Narrow-body",
+      "seat_capacity": 194,
+      "required_pilots": 2,
+      "required_fas": 4,
+      "max_range_hours": 7
+    },
+    {
+      "aircraft_type": "Boeing 787-9",
+      "category": "Wide-body",
+      "seat_capacity": 296,
+      "required_pilots": 3,
+      "required_fas": 8,
+      "max_range_hours": 15
+    },
+    {
+      "aircraft_type": "Airbus A321XLR",
+      "category": "Narrow-body",
+      "seat_capacity": 220,
+      "required_pilots": 2,
+      "required_fas": 5,
+      "max_range_hours": 11
+    },
+    {
+      "aircraft_type": "Boeing 737 MAX 9",
+      "category": "Narrow-body",
+      "seat_capacity": 178,
+      "required_pilots": 2,
+      "required_fas": 4,
+      "max_range_hours": 7
+    },
+    {
+      "aircraft_type": "Boeing 777-300ER",
+      "category": "Wide-body",
+      "seat_capacity": 396,
+      "required_pilots": 3,
+      "required_fas": 10,
+      "max_range_hours": 16
+    },
+    {
+      "aircraft_type": "Airbus A350-900",
+      "category": "Wide-body",
+      "seat_capacity": 325,
+      "required_pilots": 3,
+      "required_fas": 9,
+      "max_range_hours": 17
+    },
+    {
+      "aircraft_type": "Embraer E175",
+      "category": "Regional",
+      "seat_capacity": 76,
+      "required_pilots": 2,
+      "required_fas": 2,
+      "max_range_hours": 4
+    },
+    {
+      "aircraft_type": "Boeing 757-200",
+      "category": "Narrow-body",
+      "seat_capacity": 200,
+      "required_pilots": 2,
+      "required_fas": 5,
+      "max_range_hours": 8
+    },
+    {
+      "aircraft_type": "Airbus A319",
+      "category": "Narrow-body",
+      "seat_capacity": 140,
+      "required_pilots": 2,
+      "required_fas": 3,
+      "max_range_hours": 7
+    },
+    {
+      "aircraft_type": "Boeing 767-300ER",
+      "category": "Wide-body",
+      "seat_capacity": 269,
+      "required_pilots": 2,
+      "required_fas": 7,
+      "max_range_hours": 12
+    },
+    {
+      "aircraft_type": "Airbus A330-900neo",
+      "category": "Wide-body",
+      "seat_capacity": 310,
+      "required_pilots": 2,
+      "required_fas": 8,
+      "max_range_hours": 14
+    },
+    {
+      "aircraft_type": "Boeing 737 MAX 8",
+      "category": "Narrow-body",
+      "seat_capacity": 162,
+      "required_pilots": 2,
+      "required_fas": 4,
+      "max_range_hours": 7
+    },
+    {
+      "aircraft_type": "Embraer E190-E2",
+      "category": "Regional",
+      "seat_capacity": 97,
+      "required_pilots": 2,
+      "required_fas": 2,
+      "max_range_hours": 5
+    },
+    {
+      "aircraft_type": "Boeing 787-10",
+      "category": "Wide-body",
+      "seat_capacity": 330,
+      "required_pilots": 3,
+      "required_fas": 9,
+      "max_range_hours": 13
+    },
+    {
+      "aircraft_type": "Airbus A220-300",
+      "category": "Narrow-body",
+      "seat_capacity": 145,
+      "required_pilots": 2,
+      "required_fas": 3,
+      "max_range_hours": 6
+    },
+    {
+      "aircraft_type": "Boeing 777X",
+      "category": "Wide-body",
+      "seat_capacity": 426,
+      "required_pilots": 3,
+      "required_fas": 12,
+      "max_range_hours": 18
+    },
+    {
+      "aircraft_type": "Airbus A321neo",
+      "category": "Narrow-body",
+      "seat_capacity": 244,
+      "required_pilots": 2,
+      "required_fas": 5,
+      "max_range_hours": 8
+    },
+    {
+      "aircraft_type": "CRJ-900",
+      "category": "Regional",
+      "seat_capacity": 76,
+      "required_pilots": 2,
+      "required_fas": 2,
+      "max_range_hours": 3
+    },
+    {
+      "aircraft_type": "Boeing 747-8",
+      "category": "Wide-body",
+      "seat_capacity": 467,
+      "required_pilots": 3,
+      "required_fas": 14,
+      "max_range_hours": 17
+    }
+  ],
+  "assignments": [
+    {
+      "flight_number": "AA1042",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Boeing 737-800",
+      "assigned_pilots": [
+        {
+          "employee_id": "P001",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P004",
+          "role": "First Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA001",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA008",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA016",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA018",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 6
+    },
+    {
+      "flight_number": "UA2187",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Airbus A320neo",
+      "assigned_pilots": [
+        {
+          "employee_id": "P002",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P020",
+          "role": "First Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA002",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA004",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA011",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA013",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 6
+    },
+    {
+      "flight_number": "DL503",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Boeing 787-9",
+      "assigned_pilots": [
+        {
+          "employee_id": "P016",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P003",
+          "role": "First Officer",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "P012",
+          "role": "Second Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA006",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA007",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA003",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA008",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA011",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA013",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA016",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA018",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": true,
+      "total_crew": 11
+    },
+    {
+      "flight_number": "WN4421",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Boeing 737 MAX 9",
+      "assigned_pilots": [
+        {
+          "employee_id": "P007",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P018",
+          "role": "First Officer",
+          "compliance_status": "YELLOW"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA010",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA015",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA004",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA020",
+          "role": "FA",
+          "compliance_status": "RED"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 6
+    },
+    {
+      "flight_number": "B6718",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Airbus A321XLR",
+      "assigned_pilots": [
+        {
+          "employee_id": "P011",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P015",
+          "role": "First Officer",
+          "compliance_status": "YELLOW"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA014",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA012",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA017",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA008",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA016",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 7
+    },
+    {
+      "flight_number": "AA3305",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Embraer E175",
+      "assigned_pilots": [
+        {
+          "employee_id": "P019",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P005",
+          "role": "Second Officer",
+          "compliance_status": "RED"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA019",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA005",
+          "role": "FA",
+          "compliance_status": "RED"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 4
+    },
+    {
+      "flight_number": "UA891",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Boeing 777-300ER",
+      "assigned_pilots": [
+        {
+          "employee_id": "P006",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P013",
+          "role": "First Officer",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P017",
+          "role": "Second Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA001",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA002",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA007",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA009",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA004",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA008",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA011",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA013",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA016",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA018",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": true,
+      "total_crew": 13
+    },
+    {
+      "flight_number": "DL1822",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Airbus A319",
+      "assigned_pilots": [
+        {
+          "employee_id": "P014",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P008",
+          "role": "First Officer",
+          "compliance_status": "YELLOW"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA006",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA017",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA020",
+          "role": "FA",
+          "compliance_status": "RED"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 5
+    },
+    {
+      "flight_number": "AA7750",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Boeing 757-200",
+      "assigned_pilots": [
+        {
+          "employee_id": "P009",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P010",
+          "role": "First Officer",
+          "compliance_status": "RED"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA010",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA003",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA015",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA004",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA011",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 7
+    },
+    {
+      "flight_number": "WN1133",
+      "flight_date": "2026-04-24",
+      "aircraft_type": "Boeing 737-800",
+      "assigned_pilots": [
+        {
+          "employee_id": "P019",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P004",
+          "role": "First Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA014",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA012",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA013",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA018",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 6
+    },
+    {
+      "flight_number": "UA445",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Airbus A350-900",
+      "assigned_pilots": [
+        {
+          "employee_id": "P006",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P013",
+          "role": "First Officer",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P012",
+          "role": "Second Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA001",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA002",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA007",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA003",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA004",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA008",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA011",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA016",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA018",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": true,
+      "total_crew": 12
+    },
+    {
+      "flight_number": "DL2290",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Boeing 737 MAX 8",
+      "assigned_pilots": [
+        {
+          "employee_id": "P007",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P018",
+          "role": "First Officer",
+          "compliance_status": "YELLOW"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA019",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA015",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA005",
+          "role": "FA",
+          "compliance_status": "RED"
+        },
+        {
+          "employee_id": "FA020",
+          "role": "FA",
+          "compliance_status": "RED"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 6
+    },
+    {
+      "flight_number": "AA1580",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Airbus A321neo",
+      "assigned_pilots": [
+        {
+          "employee_id": "P011",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P015",
+          "role": "First Officer",
+          "compliance_status": "YELLOW"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA010",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA017",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA009",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA004",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA013",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 7
+    },
+    {
+      "flight_number": "B6204",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Embraer E190-E2",
+      "assigned_pilots": [
+        {
+          "employee_id": "P014",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P005",
+          "role": "Second Officer",
+          "compliance_status": "RED"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA006",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA011",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 4
+    },
+    {
+      "flight_number": "UA1672",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Boeing 767-300ER",
+      "assigned_pilots": [
+        {
+          "employee_id": "P009",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P003",
+          "role": "First Officer",
+          "compliance_status": "YELLOW"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA014",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA012",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA002",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA008",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA016",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA018",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA020",
+          "role": "FA",
+          "compliance_status": "RED"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 9
+    },
+    {
+      "flight_number": "WN3087",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Boeing 737-800",
+      "assigned_pilots": [
+        {
+          "employee_id": "P002",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P020",
+          "role": "First Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA001",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA007",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA004",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA013",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 6
+    },
+    {
+      "flight_number": "DL910",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Airbus A330-900neo",
+      "assigned_pilots": [
+        {
+          "employee_id": "P016",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P010",
+          "role": "First Officer",
+          "compliance_status": "RED"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA006",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA003",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA009",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA015",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA005",
+          "role": "FA",
+          "compliance_status": "RED"
+        },
+        {
+          "employee_id": "FA008",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA011",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA016",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 10
+    },
+    {
+      "flight_number": "AA620",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "CRJ-900",
+      "assigned_pilots": [
+        {
+          "employee_id": "P017",
+          "role": "Second Officer",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P008",
+          "role": "First Officer",
+          "compliance_status": "YELLOW"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA019",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA018",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 4
+    },
+    {
+      "flight_number": "UA2050",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Boeing 777X",
+      "assigned_pilots": [
+        {
+          "employee_id": "P006",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P013",
+          "role": "First Officer",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P012",
+          "role": "Second Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA010",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA002",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA007",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA017",
+          "role": "Senior FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA003",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA004",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA008",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA011",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA013",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA016",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA018",
+          "role": "FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA020",
+          "role": "FA",
+          "compliance_status": "RED"
+        }
+      ],
+      "relief_crew": true,
+      "total_crew": 15
+    },
+    {
+      "flight_number": "B6955",
+      "flight_date": "2026-04-25",
+      "aircraft_type": "Airbus A220-300",
+      "assigned_pilots": [
+        {
+          "employee_id": "P001",
+          "role": "Captain",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "P004",
+          "role": "First Officer",
+          "compliance_status": "GREEN"
+        }
+      ],
+      "assigned_fas": [
+        {
+          "employee_id": "FA014",
+          "role": "Lead FA",
+          "compliance_status": "GREEN"
+        },
+        {
+          "employee_id": "FA012",
+          "role": "Senior FA",
+          "compliance_status": "YELLOW"
+        },
+        {
+          "employee_id": "FA005",
+          "role": "FA",
+          "compliance_status": "RED"
+        }
+      ],
+      "relief_crew": false,
+      "total_crew": 5
+    }
+  ]
+}
