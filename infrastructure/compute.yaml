@@ -39,21 +39,33 @@ Parameters:
   DocDbSecretArn:
     Type: String
 
+  # Secondary VPC Origin ID - passed from secondary region stack for origin group failover
+  SecondaryVpcOriginId:
+    Type: String
+    Default: ''
+    Description: VPC Origin ID from us-east-2 for CloudFront origin group failover
+
 Conditions:
   IsPrimary: !Equals [!Ref IsPrimaryRegion, 'true']
   HasContainerImage: !Not [!Equals [!Ref ContainerImageUri, '']]
+  HasSecondaryVpcOrigin: !Not [!Equals [!Ref SecondaryVpcOriginId, '']]
 
 Resources:
 
   # ============================================================
   # FlightAware API Key (Secrets Manager)
+  # Created in primary region only — replicates to secondary automatically.
+  # deploy.py updates the key value via put-secret-value in primary only.
   # ============================================================
   FlightAwareSecret:
     Type: AWS::SecretsManager::Secret
+    Condition: IsPrimary
     Properties:
       Name: !Sub '${StackPrefix}/flightaware/api-key'
       Description: FlightAware AeroAPI key for live flight data refresh - updated by deploy.py
       SecretString: '{"api_key":"PLACEHOLDER-UPDATE-VIA-DEPLOY"}'
+      ReplicaRegions:
+        - Region: !Ref SecondaryRegion
 
   # ============================================================
   # ECR Repository
@@ -429,21 +441,106 @@ Resources:
       DistributionConfig:
         Enabled: true
         DefaultCacheBehavior:
-          TargetOriginId: alb-origin
+          # Default behavior handles read traffic (GET/HEAD/OPTIONS).
+          # When origin group is active, reads auto-failover on 502/503/504.
+          # When no origin group, all methods go to primary origin directly.
+          TargetOriginId: !If [HasSecondaryVpcOrigin, alb-origin-group, alb-primary]
           ViewerProtocolPolicy: redirect-to-https
           Compress: true
-          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          AllowedMethods: !If
+            - HasSecondaryVpcOrigin
+            - [GET, HEAD, OPTIONS]
+            - [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
           CachedMethods: [GET, HEAD]
           CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
           OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3  # AllViewer
           ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+        # When origin group is active, write operations (POST/PUT/DELETE) need a separate
+        # cache behavior pointing directly to the primary origin (not the origin group).
+        # CloudFront does not allow write methods on behaviors using origin groups.
+        # Writes fail during DR until ARC scales up secondary ECS — documented tradeoff.
+        CacheBehaviors: !If
+          - HasSecondaryVpcOrigin
+          - - PathPattern: '/api/flights'
+              TargetOriginId: alb-primary
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              CachedMethods: [GET, HEAD]
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+              ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+            - PathPattern: '/api/flights/*'
+              TargetOriginId: alb-primary
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              CachedMethods: [GET, HEAD]
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+              ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+            - PathPattern: '/api/airports'
+              TargetOriginId: alb-primary
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              CachedMethods: [GET, HEAD]
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+              ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+            - PathPattern: '/api/airports/*'
+              TargetOriginId: alb-primary
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              CachedMethods: [GET, HEAD]
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+              ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+            - PathPattern: '/api/crew'
+              TargetOriginId: alb-primary
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              CachedMethods: [GET, HEAD]
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+              ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+            - PathPattern: '/api/crew/*'
+              TargetOriginId: alb-primary
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              CachedMethods: [GET, HEAD]
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+              ResponseHeadersPolicyId: !Ref ResponseHeadersPolicy
+          - !Ref 'AWS::NoValue'
         Origins:
-          - Id: alb-origin
+          - Id: alb-primary
             DomainName: !GetAtt LoadBalancer.DNSName
             VpcOriginConfig:
               VpcOriginId: !GetAtt VpcOrigin.Id
               OriginReadTimeout: 30
               OriginKeepaliveTimeout: 5
+          - !If
+            - HasSecondaryVpcOrigin
+            - Id: alb-secondary
+              DomainName: !GetAtt LoadBalancer.DNSName
+              VpcOriginConfig:
+                VpcOriginId: !Ref SecondaryVpcOriginId
+                OriginReadTimeout: 30
+                OriginKeepaliveTimeout: 5
+            - !Ref 'AWS::NoValue'
+        OriginGroups: !If
+          - HasSecondaryVpcOrigin
+          - Quantity: 1
+            Items:
+              - Id: alb-origin-group
+                FailoverCriteria:
+                  StatusCodes:
+                    Items: [502, 503, 504]
+                    Quantity: 3
+                Members:
+                  Quantity: 2
+                  Items:
+                    - OriginId: alb-primary
+                    - OriginId: alb-secondary
+          - !Ref 'AWS::NoValue'
         PriceClass: PriceClass_100
         HttpVersion: http2
         ViewerCertificate:
@@ -651,129 +748,9 @@ Resources:
           Value: AirportHub
 
   # ============================================================
-  # ARC Helper Lambda: CloudFront origin switch
-  # Deployed in both regions - ARC requires Lambda ARNs per region
+  # ARC Helper Lambda: CloudFront origin switch - REMOVED
+  # Origin group failover handles this via data plane (no control plane call needed)
   # ============================================================
-  CfSwitchRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub '${StackPrefix}-cf-switch-role-${AWS::Region}'
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: CloudFrontAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - cloudfront:ListDistributions
-                  - cloudfront:ListTagsForResource
-                  - cloudfront:GetDistributionConfig
-                  - cloudfront:UpdateDistribution
-                  - cloudfront:ListVpcOrigins
-                Resource: '*'
-              # Bug #66: ELBv2 permissions for ALB DNS lookup
-              - Effect: Allow
-                Action:
-                  - elasticloadbalancing:DescribeLoadBalancers
-                Resource: '*'
-
-  CfSwitchFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub '${StackPrefix}-cf-switch-${AWS::Region}'
-      Runtime: python3.12
-      Handler: index.handler
-      Role: !GetAtt CfSwitchRole.Arn
-      Timeout: 60
-      MemorySize: 128
-      ReservedConcurrentExecutions: 10
-      Environment:
-        Variables:
-          STACK_PREFIX: !Ref StackPrefix
-          PRIMARY_REGION: !If [IsPrimary, !Ref 'AWS::Region', !Ref PrimaryRegion]
-          SECONDARY_REGION: !Ref SecondaryRegion
-          VPC_ORIGIN_NAME_PREFIX: !Sub '${StackPrefix}-vpc-origin-'
-      Code:
-        ZipFile: |
-          """Switch CloudFront origin to the activating region's ALB and VPC Origin.
-          BUG-3 fix: Swaps both DomainName and VpcOriginId so CloudFront can
-          reach the target region's ALB through the correct VPC Origin ENIs."""
-          import boto3, os, json, logging
-          logger = logging.getLogger()
-          logger.setLevel(logging.INFO)
-          cf = boto3.client('cloudfront')
-          def handler(event, context):
-              logger.info(f"Full ARC event: {json.dumps(event)}")
-              activating = event.get('targetRegion', event.get('activatingRegion', os.environ['AWS_REGION']))
-              prefix = os.environ['STACK_PREFIX']
-              vpc_origin_name_prefix = os.environ['VPC_ORIGIN_NAME_PREFIX']
-              logger.info(f"CF switch: activating={activating}")
-              # Look up ALB DNS in the activating region
-              elbv2 = boto3.client('elbv2', region_name=activating)
-              albs = elbv2.describe_load_balancers()['LoadBalancers']
-              alb_dns = None
-              for alb in albs:
-                  if alb['LoadBalancerName'] == f'{prefix}-alb':
-                      alb_dns = alb['DNSName']
-                      break
-              if not alb_dns:
-                  raise Exception(f'ALB {prefix}-alb not found in {activating}')
-              logger.info(f"Resolved ALB DNS in {activating}: {alb_dns}")
-              # Find the VPC Origin for the activating region by name convention
-              target_vpc_origin_name = f"{vpc_origin_name_prefix}{activating}"
-              vpc_origins = cf.list_vpc_origins().get('VpcOriginList', {}).get('Items', [])
-              target_vpc_origin_id = None
-              for vo in vpc_origins:
-                  if vo.get('Name') == target_vpc_origin_name:
-                      target_vpc_origin_id = vo['Id']
-                      break
-              if not target_vpc_origin_id:
-                  raise Exception(f'VPC Origin {target_vpc_origin_name} not found')
-              logger.info(f"Resolved VPC Origin: {target_vpc_origin_name} -> {target_vpc_origin_id}")
-              # Find the CloudFront distribution by tag
-              dists = cf.list_distributions().get('DistributionList', {}).get('Items', [])
-              dist_id = None
-              for dist in dists:
-                  tags = cf.list_tags_for_resource(Resource=dist['ARN'])['Tags']['Items']
-                  if any(t['Key'] == 'Project' and t['Value'] == 'AirportHub' for t in tags):
-                      dist_id = dist['Id']
-                      break
-              if not dist_id:
-                  raise Exception('CloudFront distribution not found')
-              # Update distribution origin: DomainName + VpcOriginId
-              resp = cf.get_distribution_config(Id=dist_id)
-              config = resp['DistributionConfig']
-              etag = resp['ETag']
-              changed = False
-              for origin in config['Origins']['Items']:
-                  if origin.get('VpcOriginConfig'):
-                      if origin['DomainName'] != alb_dns:
-                          logger.info(f"Switching DomainName: {origin['DomainName']} -> {alb_dns}")
-                          origin['DomainName'] = alb_dns
-                          changed = True
-                      if origin['VpcOriginConfig']['VpcOriginId'] != target_vpc_origin_id:
-                          logger.info(f"Switching VpcOriginId: {origin['VpcOriginConfig']['VpcOriginId']} -> {target_vpc_origin_id}")
-                          origin['VpcOriginConfig']['VpcOriginId'] = target_vpc_origin_id
-                          changed = True
-                      break
-              if changed:
-                  cf.update_distribution(DistributionConfig=config, Id=dist_id, IfMatch=etag)
-                  logger.info(f"Distribution {dist_id} updated")
-              else:
-                  logger.info(f"Origin already correct, no update needed")
-              return {'status': 'SUCCESS', 'distributionId': dist_id, 'albDns': alb_dns, 'vpcOriginId': target_vpc_origin_id}
-      Tags:
-        - Key: Project
-          Value: AirportHub
 
   # ============================================================
   # ARC Helper Lambda: ECS scale down (source region to 0 tasks)
@@ -872,11 +849,14 @@ Outputs:
   CodeBuildTriggerFunctionArn:
     Condition: IsPrimary
     Value: !GetAtt CodeBuildTriggerFunction.Arn
-  CfSwitchFunctionArn:
-    Value: !GetAtt CfSwitchFunction.Arn
   EcsScaleDownFunctionArn:
     Value: !GetAtt EcsScaleDownFunction.Arn
   FlightAwareSecretArn:
-    Value: !Ref FlightAwareSecret
+    # Primary: full ARN from created secret. Secondary: secret name works as SecretId
+    # because Secrets Manager resolves names to the local replica automatically.
+    Value: !If
+      - IsPrimary
+      - !Ref FlightAwareSecret
+      - !Sub '${StackPrefix}/flightaware/api-key'
   VpcOriginId:
     Value: !GetAtt VpcOrigin.Id

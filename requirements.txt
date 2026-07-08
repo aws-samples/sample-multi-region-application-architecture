@@ -1,0 +1,20 @@
+# Operator dependencies for deploy.py
+# Install with: pip3 install -r requirements.txt
+#
+# System prerequisites (not pip-installable):
+#   - Python 3.9+ with pip3: required
+#   - AWS CLI v2: required — deploy.py calls aws cloudformation, aws ecs, aws s3, etc.
+#     Install: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html
+#
+# Python dependencies:
+#   - boto3: required for Secrets Manager operations (API key updates)
+#   - rich: optional — provides progress bars and styled output; script falls back to plain text if missing
+
+# Windows compatibility:
+#   - deploy.py is developed and tested on macOS/Linux
+#   - Windows may require 'pip' instead of 'pip3' (Lambda dependency install step)
+#   - shlex.split() uses POSIX parsing; unlikely to cause issues with AWS CLI commands
+#   - If issues arise, use WSL2 for a consistent experience
+
+boto3>=1.34.0
+rich>=13.0.0

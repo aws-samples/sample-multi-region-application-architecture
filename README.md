@@ -95,7 +95,8 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 ```
 .
 ├── airporthub-master.yaml          # CloudFormation parent stack (orchestrates all nested stacks)
-├── deploy.py                       # Interactive deploy/teardown script
+├── deploy.py                       # Interactive deploy script
+├── teardown.py                     # Standalone teardown script (handles failures, retries)
 ├── infrastructure/                 # CloudFormation nested stack templates
 │   ├── network.yaml                #   VPC, subnets, NAT, security groups, VPC endpoints
 │   ├── auth.yaml                   #   Cognito User Pool + App Client
@@ -164,7 +165,12 @@ The database is the centerpiece of the DR strategy. Key properties:
 
 ### CloudFront as the Traffic Switch
 
-CloudFront sits in front of both ALBs via **VPC Origins** — a private connectivity path that routes traffic over AWS's internal backbone without exposing the ALBs to the public internet. Both ALBs are internal (no public IP) and only reachable through CloudFront's managed network interfaces. Failover is a single Lambda call that updates the active origin — no DNS TTL wait, no Route 53 record change. This is the fastest part of the failover sequence.
+CloudFront sits in front of both ALBs via **VPC Origins** — a private connectivity path that routes traffic over AWS's internal backbone without exposing the ALBs to the public internet. Both ALBs are internal (no public IP) and only reachable through CloudFront's managed network interfaces.
+
+**Origin Group Failover (Data Plane):** CloudFront is configured with an origin group containing both VPC Origins (primary in us-east-1, secondary in us-east-2). On 502/503/504 from the primary, CloudFront automatically retries the request against the secondary origin — no control plane API call needed.
+
+> [!IMPORTANT]
+> **CloudFront origin group failover only covers GET/HEAD/OPTIONS requests.** POST/PUT/DELETE operations (crew assignments, airport CRUD) will not auto-failover. These write operations become available after the ARC plan scales ECS in the recovery region. The dashboard is read-heavy, so this covers the critical path during DR.
 
 ### ARC Region Switch — Replacing the Runbook
 
@@ -292,8 +298,20 @@ The deploy script handles everything in order:
 > **Tear down promptly when not in use.** This demo deploys resources across two regions that incur ongoing costs. The primary ongoing cost is the **DocumentDB Global Cluster** running in both regions.
 
 ```bash
-python3 deploy.py --teardown
+# Recommended: standalone teardown script (handles VPC endpoints, ECR images, retry logic)
+python3 teardown.py --profile my-profile
+
+# Preview what would be deleted without taking action
+python3 teardown.py --profile my-profile --dry-run
+
+# Skip confirmation prompt
+python3 teardown.py --profile my-profile --yes
+
+# Legacy (delegates to teardown.py)
+python3 deploy.py --teardown --profile my-profile
 ```
+
+The teardown script auto-discovers all AirportHub resources by prefix, handles common deletion blockers (VPC endpoint ENIs, ECR images, DocumentDB global cluster ordering), and retries on failure.
 
 ---
 

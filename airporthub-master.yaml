@@ -58,6 +58,12 @@ Parameters:
     Default: '10.0.0.0/16'
     Description: VPC CIDR block
 
+  # CloudFront origin group - empty on first deploy, populated after secondary creates its VPC Origin
+  SecondaryVpcOriginId:
+    Type: String
+    Default: ''
+    Description: VPC Origin ID from us-east-2 (enables CloudFront origin group failover)
+
 Conditions:
   # True when deploying to the primary region
   IsPrimaryRegion: !Equals
@@ -152,6 +158,7 @@ Resources:
         CognitoAppClientId: !If [IsPrimaryRegion, !GetAtt AuthStack.Outputs.AppClientId, !Ref CognitoAppClientId]
         DocDbEndpoint: !GetAtt DatabaseStack.Outputs.ClusterEndpoint
         DocDbSecretArn: !GetAtt DatabaseStack.Outputs.SecretArn
+        SecondaryVpcOriginId: !Ref SecondaryVpcOriginId
       Tags:
         - Key: Project
           Value: AirportHub
@@ -317,8 +324,6 @@ Outputs:
   EcrRepositoryUri:
     Condition: IsPrimaryRegion
     Value: !GetAtt ComputeStack.Outputs.EcrRepositoryUri
-  CfSwitchFunctionArn:
-    Value: !GetAtt ComputeStack.Outputs.CfSwitchFunctionArn
   EcsScaleDownFunctionArn:
     Value: !GetAtt ComputeStack.Outputs.EcsScaleDownFunctionArn
 

@@ -323,6 +323,7 @@ Resources:
       DocDbEndpoint: !Ref DocDbEndpoint
       DocDbSecretArn: !Ref DocDbSecretArn
       DatabaseName: airports
+      SeedVersion: "2"
 
 Outputs:
   FlightsLambdaArn:

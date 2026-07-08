@@ -27,7 +27,6 @@ import argparse
 import json
 import logging
 import os
-import shlex
 import shutil
 import subprocess
 import sys
@@ -211,12 +210,17 @@ AWS_PROFILE: str | None = None
 # ---------------------------------------------------------------------------
 # Helper: run an AWS CLI command and return parsed JSON output
 # ---------------------------------------------------------------------------
-def run_aws(command: str, region: str, capture: bool = True, quiet: bool = False) -> dict:
+def run_aws(cmd: list[str], region: str, capture: bool = True, quiet: bool = False) -> dict:
     """
     Execute an AWS CLI command with the given region.
 
+    Builds the subprocess argument list directly (no shell interpolation or
+    string splitting), which prevents command injection and ensures arguments
+    with special characters are passed correctly.
+
     Args:
-        command: AWS CLI command (without 'aws' prefix), e.g. 'sts get-caller-identity'
+        cmd: AWS CLI command as a list of individual arguments,
+             e.g. ["sts", "get-caller-identity"]
         region: AWS region code
         capture: If True, parse and return JSON output; if False, stream output
         quiet: If True, suppress error logging (caller handles the error)
@@ -224,17 +228,18 @@ def run_aws(command: str, region: str, capture: bool = True, quiet: bool = False
     Returns:
         Parsed JSON response as dict, or empty dict if capture=False
     """
-    profile_flag = f" --profile {AWS_PROFILE}" if AWS_PROFILE else ""
-    full_cmd = f"aws {command} --region {region}{profile_flag} --output json"
-    # Log the command being run
-    logger.info(f"Running: {full_cmd}")
+    # Build the full command as a list — each element is one argument, so
+    # subprocess passes them directly to the OS without shell parsing.
+    full_cmd = ["aws"] + cmd + ["--region", region, "--output", "json"]
+    if AWS_PROFILE:
+        full_cmd.extend(["--profile", AWS_PROFILE])
 
-    # Use shlex.split for safe command execution without shell=True
-    cmd_args = shlex.split(full_cmd)
+    # Log the command being run
+    logger.info(f"Running: {' '.join(full_cmd)}")
 
     if capture:
         result = subprocess.run(  # nosemgrep: dangerous-subprocess-use-audit
-            cmd_args, capture_output=True, text=True
+            full_cmd, capture_output=True, text=True
         )
         if result.returncode != 0:
             if not quiet:
@@ -243,7 +248,7 @@ def run_aws(command: str, region: str, capture: bool = True, quiet: bool = False
         return json.loads(result.stdout) if result.stdout.strip() else {}
     else:
         # Stream output to console (for long-running commands)
-        result = subprocess.run(cmd_args)  # nosemgrep: dangerous-subprocess-use-audit
+        result = subprocess.run(full_cmd)  # nosemgrep: dangerous-subprocess-use-audit
         if result.returncode != 0:
             raise RuntimeError(f"Command failed with exit code {result.returncode}")
         return {}
@@ -252,7 +257,7 @@ def run_aws(command: str, region: str, capture: bool = True, quiet: bool = False
 def stack_exists(stack_name: str, region: str) -> bool:
     """Check if a CloudFormation stack exists (any status except DELETE_COMPLETE)."""
     try:
-        resp = run_aws(f"cloudformation describe-stacks --stack-name {stack_name}", region=region, quiet=True)
+        resp = run_aws(["cloudformation", "describe-stacks", "--stack-name", stack_name], region=region, quiet=True)
         status = resp.get("Stacks", [{}])[0].get("StackStatus", "")
         return "DELETE_COMPLETE" not in status
     except RuntimeError:
@@ -271,7 +276,7 @@ def validate_prerequisites() -> None:
 
     # Check AWS CLI
     try:
-        subprocess.run(
+        subprocess.run(  # nosemgrep: dangerous-subprocess-use-audit
             ["aws", "--version"], capture_output=True, check=True
         )
         logger.info("  ✓ AWS CLI installed")
@@ -280,7 +285,7 @@ def validate_prerequisites() -> None:
 
     # Check AWS SSO auth is valid
     try:
-        identity = run_aws("sts get-caller-identity", region="us-east-1")
+        identity = run_aws(["sts", "get-caller-identity"], region="us-east-1")
         account_id = identity["Account"]
         logger.info(f"  ✓ Authenticated to AWS account {account_id}")
     except RuntimeError:
@@ -289,7 +294,7 @@ def validate_prerequisites() -> None:
     # Ensure ECS service-linked role exists (required for first-time ECS usage)
     try:
         run_aws(
-            "iam create-service-linked-role --aws-service-name ecs.amazonaws.com",
+            ["iam", "create-service-linked-role", "--aws-service-name", "ecs.amazonaws.com"],
             region="us-east-1",
             quiet=True
         )
@@ -303,7 +308,7 @@ def validate_prerequisites() -> None:
     # Ensure Application Signals SLR exists (required for traces/metrics in CloudWatch)
     try:
         run_aws(
-            "iam create-service-linked-role --aws-service-name application-signals.cloudwatch.amazonaws.com",
+            ["iam", "create-service-linked-role", "--aws-service-name", "application-signals.cloudwatch.amazonaws.com"],
             region="us-east-1",
             quiet=True
         )
@@ -320,7 +325,7 @@ def validate_prerequisites() -> None:
     # The cluster-level setting in compute.yaml handles existing clusters.
     for region in ["us-east-1", "us-east-2"]:
         run_aws(
-            "ecs put-account-setting --name containerInsights --value enhanced",
+            ["ecs", "put-account-setting", "--name", "containerInsights", "--value", "enhanced"],
             region=region,
             quiet=True
         )
@@ -390,7 +395,7 @@ def collect_inputs(args: argparse.Namespace) -> dict:
     config["secondary_stack"] = f"{config['stack_prefix']}-{config['secondary_region']}"
 
     # Get AWS account ID for S3 bucket naming
-    identity = run_aws("sts get-caller-identity", region=config["primary_region"])
+    identity = run_aws(["sts", "get-caller-identity"], region=config["primary_region"])
     config["account_id"] = identity["Account"]
 
     # ARC approval role — prompt upfront so deploy runs unattended
@@ -399,7 +404,7 @@ def collect_inputs(args: argparse.Namespace) -> dict:
         if ":assumed-role/" in caller_arn:
             role_name = caller_arn.split("/")[-2]
             try:
-                role_info = run_aws(f"iam get-role --role-name {role_name}", region=config["primary_region"])
+                role_info = run_aws(["iam", "get-role", "--role-name", role_name], region=config["primary_region"])
                 sso_role = role_info["Role"]["Arn"]
             except RuntimeError:
                 parts = caller_arn.split(":")
@@ -449,7 +454,7 @@ def install_lambda_dependencies() -> None:
         if not os.path.isfile(req_file):
             continue
         logger.info(f"  Installing dependencies for {lambda_dir}...")
-        result = subprocess.run(
+        result = subprocess.run(  # nosemgrep: dangerous-subprocess-use-audit
             ["pip3", "install", "-r", req_file, "-t", lambda_dir, "--quiet", "--upgrade"],
             capture_output=True, text=True
         )
@@ -500,11 +505,11 @@ def package_templates(config: dict, region: str) -> str:
     try:
         if region == "us-east-1":
             # us-east-1 doesn't accept LocationConstraint
-            run_aws(f"s3api create-bucket --bucket {bucket_name}", region=region, quiet=True)
+            run_aws(["s3api", "create-bucket", "--bucket", bucket_name], region=region, quiet=True)
         else:
             run_aws(
-                f"s3api create-bucket --bucket {bucket_name} "
-                f"--create-bucket-configuration LocationConstraint={region}",
+                ["s3api", "create-bucket", "--bucket", bucket_name,
+                 "--create-bucket-configuration", f"LocationConstraint={region}"],
                 region=region, quiet=True
             )
         logger.info(f"  Created S3 bucket: {bucket_name}")
@@ -517,20 +522,22 @@ def package_templates(config: dict, region: str) -> str:
 
     # Block public access on the template bucket
     run_aws(
-        f"s3api put-public-access-block --bucket {bucket_name} "
-        f"--public-access-block-configuration "
-        f"BlockPublicAcls=true,IgnorePublicAcls=true,"
-        f"BlockPublicPolicy=true,RestrictPublicBuckets=true",
+        ["s3api", "put-public-access-block", "--bucket", bucket_name,
+         "--public-access-block-configuration",
+         ("BlockPublicAcls=true,IgnorePublicAcls=true,"
+          "BlockPublicPolicy=true,RestrictPublicBuckets=true")],
         region=region
     )
 
     # Lifecycle rule: delete old packaged artifacts after 30 days (non-fatal if SCP blocks it)
+    lifecycle_json = json.dumps({
+        "Rules": [{"ID": "expire-old-templates", "Status": "Enabled",
+                   "Expiration": {"Days": 30}, "Filter": {}}]
+    })
     try:
         run_aws(
-            f"s3api put-bucket-lifecycle-configuration --bucket {bucket_name} "
-            f"--lifecycle-configuration "
-            f"'{{\"Rules\":[{{\"ID\":\"expire-old-templates\",\"Status\":\"Enabled\","
-            f"\"Expiration\":{{\"Days\":30}},\"Filter\":{{}}}}]}}'",
+            ["s3api", "put-bucket-lifecycle-configuration", "--bucket", bucket_name,
+             "--lifecycle-configuration", lifecycle_json],
             region=region, quiet=True
         )
     except RuntimeError:
@@ -539,13 +546,13 @@ def package_templates(config: dict, region: str) -> str:
     # Package: uploads child templates to S3, rewrites TemplateURL references
     # Account-specific filename prevents collisions when deploying to multiple accounts from same workspace
     packaged_path = f"packaged-master-{region}-{config['account_id']}.yaml"
-    package_cmd = (
-        f"cloudformation package "
-        f"--template-file airporthub-master.yaml "
-        f"--s3-bucket {bucket_name} "
-        f"--output-template-file {packaged_path}"
+    run_aws(
+        ["cloudformation", "package",
+         "--template-file", "airporthub-master.yaml",
+         "--s3-bucket", bucket_name,
+         "--output-template-file", packaged_path],
+        region=region, capture=False
     )
-    run_aws(package_cmd, region=region, capture=False)
     logger.info(f"  Packaged template: {packaged_path}")
 
     return packaged_path
@@ -576,6 +583,13 @@ def deploy_master_stack(
     action = "Updating existing" if is_update else "Creating new"
     logger.warning(f"{action} stack '{stack_name}' in {region}...")
 
+    # Print CloudFormation console link for monitoring during long waits
+    cfn_url = f"https://{region}.console.aws.amazon.com/cloudformation/home?region={region}#/stacks"
+    if RICH_AVAILABLE and console:
+        console.print(f"  [dim]Console: {cfn_url}[/dim]")
+    else:
+        logger.info(f"  Console: {cfn_url}")
+
     # Build parameter overrides — merge defaults with any overrides
     params = {
         "PrimaryRegion": config["primary_region"],
@@ -586,17 +600,15 @@ def deploy_master_stack(
     params.update(override_params)
 
     # Format as CloudFormation parameter overrides string
-    param_overrides = " ".join(
-        f"{key}={value}" for key, value in params.items()
-    )
+    param_overrides = [f"{key}={value}" for key, value in params.items()]
 
-    deploy_cmd = (
-        f"cloudformation deploy "
-        f"--template-file {packaged_template} "
-        f"--stack-name {stack_name} "
-        f"--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND "
-        f"--parameter-overrides {param_overrides}"
-    )
+    deploy_cmd = [
+        "cloudformation", "deploy",
+        "--template-file", packaged_template,
+        "--stack-name", stack_name,
+        "--capabilities", "CAPABILITY_IAM", "CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND",
+        "--parameter-overrides",
+    ] + param_overrides
     run_aws(deploy_cmd, region=region, capture=False)
     logger.warning(f"  Stack '{stack_name}' deployed successfully")
 
@@ -616,7 +628,7 @@ def read_stack_outputs(stack_name: str, region: str) -> dict:
         Dict mapping output keys to values.
     """
     response = run_aws(
-        f"cloudformation describe-stacks --stack-name {stack_name}",
+        ["cloudformation", "describe-stacks", "--stack-name", stack_name],
         region=region
     )
     # 'Stacks' is a list; we want the first (and only) stack
@@ -672,7 +684,7 @@ def upload_source_to_s3(config: dict, region: str) -> tuple:
 
     # Upload to S3
     run_aws(
-        f"s3 cp {tmp_path} s3://{bucket_name}/{s3_key}",
+        ["s3", "cp", tmp_path, f"s3://{bucket_name}/{s3_key}"],
         region=region, capture=False
     )
     os.unlink(tmp_path)
@@ -693,7 +705,10 @@ def _update_flightaware_secret(config: dict) -> None:
 
     region = config["primary_region"]
     try:
-        sm = boto3.client("secretsmanager", region_name=region)
+        # Use AWS_PROFILE to ensure boto3 authenticates with the same profile
+        # as the rest of the deploy script (--profile flag)
+        session = boto3.Session(profile_name=AWS_PROFILE, region_name=region)
+        sm = session.client("secretsmanager")
         sm.put_secret_value(SecretId=secret_name, SecretString=secret_value)
         logger.info(f"  ✓ FlightAware secret updated in {region} (replicates to secondary)")
     except Exception as e:
@@ -709,7 +724,8 @@ def force_ecs_deployment(config: dict, region: str) -> None:
     logger.warning(f"🔄 Forcing new ECS deployment: {cluster}/{service}")
 
     run_aws(
-        f"ecs update-service --cluster {cluster} --service {service} --force-new-deployment --desired-count 2",
+        ["ecs", "update-service", "--cluster", cluster, "--service", service,
+         "--force-new-deployment", "--desired-count", "2"],
         region=region
     )
     logger.warning("  ✅ ECS deployment triggered")
@@ -726,8 +742,10 @@ def trigger_codebuild(config: dict, source_bucket: str, source_key: str) -> None
     logger.warning(f"🔨 Triggering CodeBuild: {project}")
 
     resp = run_aws(
-        f"codebuild start-build --project-name {project}"
-        f" --environment-variables-override name=SOURCE_BUCKET,value={source_bucket} name=SOURCE_KEY,value={source_key}",
+        ["codebuild", "start-build", "--project-name", project,
+         "--environment-variables-override",
+         f"name=SOURCE_BUCKET,value={source_bucket}",
+         f"name=SOURCE_KEY,value={source_key}"],
         region=region
     )
     build_id = resp["build"]["id"]
@@ -736,7 +754,7 @@ def trigger_codebuild(config: dict, source_bucket: str, source_key: str) -> None
     # Poll until complete
     while True:
         time.sleep(15)  # nosemgrep: arbitrary-sleep
-        builds = run_aws(f"codebuild batch-get-builds --ids {build_id}", region=region)
+        builds = run_aws(["codebuild", "batch-get-builds", "--ids", build_id], region=region)
         status = builds["builds"][0]["buildStatus"]
         if status == "SUCCEEDED":
             logger.warning("  ✅ CodeBuild succeeded")
@@ -765,7 +783,7 @@ def wait_for_stack(stack_name: str, region: str, timeout: int = 1800) -> str:
     start = time.time()
     while time.time() - start < timeout:
         response = run_aws(
-            f"cloudformation describe-stacks --stack-name {stack_name}",
+            ["cloudformation", "describe-stacks", "--stack-name", stack_name],
             region=region
         )
         status = response["Stacks"][0]["StackStatus"]
@@ -778,181 +796,6 @@ def wait_for_stack(stack_name: str, region: str, timeout: int = 1800) -> str:
         time.sleep(15)  # nosemgrep: arbitrary-sleep
 
     raise RuntimeError(f"Timeout waiting for stack '{stack_name}' after {timeout}s")
-
-
-# ---------------------------------------------------------------------------
-# Teardown — full cleanup of all AirportHub resources
-# ---------------------------------------------------------------------------
-def teardown_all(config: dict) -> None:
-    """
-    Remove all AirportHub resources from both regions.
-
-    Deletion order matters — child plans before parent, secondary before primary,
-    S3 emptied before stack deletion.
-    """
-    print("\n" + "=" * 60)
-    print("  🚨 AirportHub TEARDOWN")
-    print("=" * 60)
-    print(f"\n  This will DELETE all resources in:")
-    print(f"    Primary:   {config['primary_stack']} ({config['primary_region']})")
-    print(f"    Secondary: {config['secondary_stack']} ({config['secondary_region']})")
-    print(f"    ARC Plan:  {config['stack_prefix']}-arc-plan")
-    print(f"    FlightAware: flightaware-app-switchover (both regions)\n")
-
-    confirm = input("  Type 'yes' to confirm teardown: ").strip()
-    if confirm.lower() != "yes":
-        logger.info("Teardown cancelled. No resources were deleted.")
-        return
-
-    print(f"\n  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print(f"  🗑️  Confirmed. Deleting all AirportHub resources from account {config['account_id']}")
-    print(f"  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print(f"  Press Ctrl+C to abort.\n")
-
-    # Teardown steps: 11 total
-    # FlightAware x2, ARC plan, ECR x2, secondary stack, primary stack, S3 x2, logs x2
-    TEARDOWN_STEPS = 11
-    progress = create_progress_bar()
-
-    if progress:
-        with progress:
-            task = progress.add_task("Tearing down AirportHub", total=TEARDOWN_STEPS)
-
-            # Steps 1-2: Delete FlightAware stacks (both regions)
-            for i, region in enumerate([config["primary_region"], config["secondary_region"]], start=1):
-                progress.update(task, description=f"[{i}/11] Deleting FlightAware ({region})")
-                _delete_stack_safe(f"flightaware-app-switchover-{region}", region)
-                progress.advance(task)
-                step_done(f"FlightAware gone from {region} — scheduled refresh decommissioned")
-
-            # Step 3: Delete ARC plan stack
-            progress.update(task, description="[3/11] Deleting ARC plan")
-            _empty_and_delete_bucket(f"{config['stack_prefix']}-arc-reports-{config['account_id']}", config["primary_region"])
-            _delete_stack_safe(f"{config['stack_prefix']}-arc-plan", config["primary_region"])
-            progress.advance(task)
-            step_done("ARC recovery plan removed — failover automation retired")
-
-            # Steps 4-5: Clean ECR repos
-            for i, region in enumerate([config["primary_region"], config["secondary_region"]], start=4):
-                progress.update(task, description=f"[{i}/11] Deleting ECR repo ({region})")
-                _delete_ecr_repo(f"{config['stack_prefix']}-app", region)
-                progress.advance(task)
-                step_done(f"Container images wiped from ECR in {region}")
-
-            # Step 6: Delete secondary master stack
-            progress.update(task, description="[6/11] Deleting secondary stack (us-east-2)")
-            _delete_stack_safe(config["secondary_stack"], config["secondary_region"])
-            progress.advance(task)
-            step_done("Secondary region torn down — pilot light extinguished")
-
-            # Step 7: Delete primary master stack
-            progress.update(task, description="[7/11] Deleting primary stack (us-east-1)")
-            _delete_stack_safe(config["primary_stack"], config["primary_region"])
-            progress.advance(task)
-            step_done("Primary region torn down — all compute and database resources deleted")
-
-            # Steps 8-9: Empty and delete S3 template buckets
-            for i, region in enumerate([config["primary_region"], config["secondary_region"]], start=8):
-                bucket = f"{config['stack_prefix']}-templates-{region}-{config['account_id']}"
-                progress.update(task, description=f"[{i}/11] Deleting S3 bucket ({region})")
-                _empty_and_delete_bucket(bucket, region)
-                progress.advance(task)
-                step_done(f"Template bucket emptied and deleted in {region}")
-
-            # Steps 10-11: Delete CloudWatch log groups
-            for i, region in enumerate([config["primary_region"], config["secondary_region"]], start=10):
-                progress.update(task, description=f"[{i}/11] Deleting log groups ({region})")
-                _delete_log_groups(config["stack_prefix"], region)
-                progress.advance(task)
-                step_done(f"CloudWatch log groups purged in {region} — no traces left")
-
-            progress.update(task, description="[bold green]Teardown complete!")
-
-    else:
-        # Fallback: no rich — same logic with logger output
-        _run_teardown_steps(config)
-
-    logger.warning("\nTeardown complete — all resources removed.")
-
-
-def _delete_stack_safe(stack_name: str, region: str) -> None:
-    """Delete a CloudFormation stack, ignoring if it doesn't exist.
-    
-    Retries once after 60s if delete fails (handles VPC Origin ENI drain timeout).
-    """
-    try:
-        logger.info(f"Deleting stack: {stack_name} ({region})")
-        run_aws(f"cloudformation delete-stack --stack-name {stack_name}", region=region)
-        run_aws(
-            f"cloudformation wait stack-delete-complete --stack-name {stack_name}",
-            region=region, capture=False
-        )
-        logger.info(f"  ✓ Deleted {stack_name}")
-    except RuntimeError as err:
-        if "does not exist" in str(err) or "ValidationError" in str(err):
-            logger.info(f"  ⏭ Stack {stack_name} not found — skipping")
-        else:
-            # Retry once — VPC Origin ENIs take 5-10 min to release, causing DELETE_FAILED
-            logger.warning(f"  ⚠ Delete failed for {stack_name}, retrying in 60s (VPC Origin ENI drain)...")
-            time.sleep(60)
-            try:
-                run_aws(f"cloudformation delete-stack --stack-name {stack_name}", region=region)
-                run_aws(
-                    f"cloudformation wait stack-delete-complete --stack-name {stack_name}",
-                    region=region, capture=False
-                )
-                logger.info(f"  ✓ Deleted {stack_name} (retry succeeded)")
-            except RuntimeError as retry_err:
-                logger.warning(f"  ⚠ Retry also failed for {stack_name}: {retry_err}")
-
-
-def _empty_and_delete_bucket(bucket: str, region: str) -> None:
-    """Empty an S3 bucket then delete it."""
-    try:
-        logger.info(f"Emptying bucket: {bucket}")
-        run_aws(f"s3 rm s3://{bucket} --recursive", region=region, capture=False)
-        run_aws(f"s3api delete-bucket --bucket {bucket}", region=region)
-        logger.info(f"  ✓ Deleted bucket {bucket}")
-    except RuntimeError:
-        logger.info(f"  ⏭ Bucket {bucket} not found — skipping")
-
-
-def _delete_ecr_repo(repo_name: str, region: str) -> None:
-    """Delete an ECR repository and all images."""
-    try:
-        run_aws(
-            f"ecr delete-repository --repository-name {repo_name} --force",
-            region=region
-        )
-        logger.info(f"  ✓ Deleted ECR repo {repo_name} ({region})")
-    except RuntimeError:
-        logger.info(f"  ⏭ ECR repo {repo_name} not found in {region} — skipping")
-
-
-def _delete_log_groups(prefix: str, region: str) -> None:
-    """Delete CloudWatch log groups matching the stack prefix."""
-    try:
-        response = run_aws(
-            f"logs describe-log-groups --log-group-name-prefix /ecs/{prefix}",
-            region=region
-        )
-        for group in response.get("logGroups", []):
-            name = group["logGroupName"]
-            run_aws(f"logs delete-log-group --log-group-name {name}", region=region)
-            logger.info(f"  ✓ Deleted log group {name}")
-
-        # Also delete Lambda log groups
-        response = run_aws(
-            f"logs describe-log-groups --log-group-name-prefix /aws/lambda/{prefix}",
-            region=region
-        )
-        for group in response.get("logGroups", []):
-            name = group["logGroupName"]
-            run_aws(f"logs delete-log-group --log-group-name {name}", region=region)
-            logger.info(f"  ✓ Deleted log group {name}")
-    except RuntimeError:
-        logger.info(f"  ⏭ No log groups found for {prefix} in {region}")
-
 
 # ---------------------------------------------------------------------------
 # Deploy ARC plan and FlightAware microservice
@@ -976,19 +819,14 @@ def deploy_arc_plan(config: dict, primary_outputs: dict, secondary_outputs: dict
         logger.warning("  ⚠ FlightAware child plan ARN not found — ARC plan will skip nested plan")
         child_plan_arn = ""
 
-    param_overrides = " ".join([
+    param_overrides = [
         f"StackPrefix={config['stack_prefix']}",
         f"PrimaryRegion={config['primary_region']}",
         f"SecondaryRegion={config['secondary_region']}",
         f"PrimaryEcsClusterArn={primary_outputs.get('EcsClusterArn', '')}",
         f"PrimaryEcsServiceArn={primary_outputs.get('EcsServiceArn', '')}",
-        f"PrimaryAlbArn={primary_outputs.get('AlbArn', '')}",
         f"SecondaryEcsClusterArn={secondary_outputs.get('EcsClusterArn', '')}",
         f"SecondaryEcsServiceArn={secondary_outputs.get('EcsServiceArn', '')}",
-        f"SecondaryAlbArn={secondary_outputs.get('AlbArn', '')}",
-        f"CloudFrontDistributionId={primary_outputs.get('CloudFrontDistributionId', '')}",
-        f"PrimaryAlbDnsName={primary_outputs.get('AlbDnsName', '')}",
-        f"SecondaryAlbDnsName={secondary_outputs.get('AlbDnsName', '')}",
         f"DocDbGlobalClusterIdentifier={primary_outputs.get('GlobalClusterIdentifier', '')}",
         f"PrimaryDocDbClusterIdentifier={primary_outputs.get('ClusterIdentifier', '')}",
         f"SecondaryDocDbClusterIdentifier={secondary_outputs.get('ClusterIdentifier', '')}",
@@ -996,19 +834,17 @@ def deploy_arc_plan(config: dict, primary_outputs: dict, secondary_outputs: dict
         f"SecondaryFlightsLambdaArn={secondary_outputs.get('FlightsLambdaArn', '')}",
         f"FlightAwareChildPlanArn={child_plan_arn}",
         f"ApprovalRoleArn={approval_role}",
-        f"PrimaryCfSwitchFunctionArn={primary_outputs.get('CfSwitchFunctionArn', '')}",
-        f"SecondaryCfSwitchFunctionArn={secondary_outputs.get('CfSwitchFunctionArn', '')}",
         f"PrimaryEcsScaleDownFunctionArn={primary_outputs.get('EcsScaleDownFunctionArn', '')}",
         f"SecondaryEcsScaleDownFunctionArn={secondary_outputs.get('EcsScaleDownFunctionArn', '')}",
-    ])
+    ]
 
-    deploy_cmd = (
-        f"cloudformation deploy "
-        f"--template-file infrastructure/arc-region-switch-plan.yaml "
-        f"--stack-name {stack_name} "
-        f"--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM "
-        f"--parameter-overrides {param_overrides}"
-    )
+    deploy_cmd = [
+        "cloudformation", "deploy",
+        "--template-file", "infrastructure/arc-region-switch-plan.yaml",
+        "--stack-name", stack_name,
+        "--capabilities", "CAPABILITY_IAM", "CAPABILITY_NAMED_IAM",
+        "--parameter-overrides",
+    ] + param_overrides
     run_aws(deploy_cmd, region=config["primary_region"], capture=False)
     logger.warning("  ✅ ARC plan deployed")
 
@@ -1028,7 +864,7 @@ def deploy_flightaware(config: dict, primary_outputs: dict, secondary_outputs: d
         schedule_state = "ENABLED" if region == config["primary_region"] else "DISABLED"
         bucket = f"{config['stack_prefix']}-templates-{region}-{config['account_id']}"
 
-        params = " ".join([
+        params = [
             f"DocDBEndpoint={outputs.get('ClusterEndpoint', '')}",
             f"DocDBSecretArn={outputs.get('SecretArn', '')}",
             f"VpcId={outputs.get('VpcId', '')}",
@@ -1039,22 +875,22 @@ def deploy_flightaware(config: dict, primary_outputs: dict, secondary_outputs: d
             f"PrimaryRegion={config['primary_region']}",
             f"SecondaryRegion={config['secondary_region']}",
             f"ApprovalRoleArn={approval_role}",
-        ])
+        ]
 
         packaged_path = f"packaged-flightaware-{region}-{config['account_id']}.yaml"
-        package_cmd = (
-            f"cloudformation package "
-            f"--template-file scheduled-refresh-microservice/flightaware-app-switchover.yaml "
-            f"--s3-bucket {bucket} "
-            f"--output-template-file {packaged_path}"
-        )
-        deploy_cmd = (
-            f"cloudformation deploy "
-            f"--template-file {packaged_path} "
-            f"--stack-name {stack_name} "
-            f"--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM "
-            f"--parameter-overrides {params}"
-        )
+        package_cmd = [
+            "cloudformation", "package",
+            "--template-file", "scheduled-refresh-microservice/flightaware-app-switchover.yaml",
+            "--s3-bucket", bucket,
+            "--output-template-file", packaged_path,
+        ]
+        deploy_cmd = [
+            "cloudformation", "deploy",
+            "--template-file", packaged_path,
+            "--stack-name", stack_name,
+            "--capabilities", "CAPABILITY_IAM", "CAPABILITY_NAMED_IAM",
+            "--parameter-overrides",
+        ] + params
         run_aws(package_cmd, region=region, capture=False)
         run_aws(deploy_cmd, region=region, capture=False)
         return region
@@ -1162,6 +998,21 @@ def _run_full_deploy(config: dict) -> None:
     step_done("Secondary region standing by")
     logger.warning("Secondary region deployment complete!")
 
+    # Re-deploy primary with SecondaryVpcOriginId to activate CloudFront origin group failover.
+    # On first deploy, primary didn't have the secondary VPC Origin ID (chicken-and-egg).
+    # This update adds the secondary origin to CloudFront's origin group for automatic
+    # data-plane failover (GET/HEAD/OPTIONS retry on 502/503/504).
+    secondary_vpc_origin_id = secondary_outputs.get("VpcOriginId", "")
+    if secondary_vpc_origin_id:
+        logger.warning("Updating primary stack with CloudFront origin group failover...")
+        deploy_master_stack(
+            config, config["primary_region"], packaged,
+            SourceBucket=source_bucket, SourceKey=source_key,
+            ContainerImageUri=container_image,
+            SecondaryVpcOriginId=secondary_vpc_origin_id,
+        )
+        step_done("CloudFront origin group active — auto-failover enabled")
+
     approval_role = config["approval_role"]
     deploy_flightaware(config, primary_outputs, secondary_outputs, approval_role)
     step_done("FlightAware microservice deployed")
@@ -1170,38 +1021,6 @@ def _run_full_deploy(config: dict) -> None:
     step_done("ARC Region Switch plan armed")
 
 
-def _run_teardown_steps(config: dict) -> None:
-    """Execute the full teardown sequence (shared logic for rich and non-rich paths)."""
-    for region in [config["primary_region"], config["secondary_region"]]:
-        _delete_stack_safe(f"flightaware-app-switchover-{region}", region)
-        step_done(f"FlightAware gone from {region}")
-
-    _empty_and_delete_bucket(f"{config['stack_prefix']}-arc-reports-{config['account_id']}", config["primary_region"])
-    _delete_stack_safe(f"{config['stack_prefix']}-arc-plan", config["primary_region"])
-    step_done("ARC plan removed")
-
-    for region in [config["primary_region"], config["secondary_region"]]:
-        _delete_ecr_repo(f"{config['stack_prefix']}-app", region)
-        step_done(f"ECR repo deleted in {region}")
-
-    _delete_stack_safe(config["secondary_stack"], config["secondary_region"])
-    step_done("Secondary region torn down")
-
-    _delete_stack_safe(config["primary_stack"], config["primary_region"])
-    step_done("Primary region torn down")
-
-    for region in [config["primary_region"], config["secondary_region"]]:
-        bucket = f"{config['stack_prefix']}-templates-{region}-{config['account_id']}"
-        _empty_and_delete_bucket(bucket, region)
-        step_done(f"Template bucket deleted in {region}")
-
-    for region in [config["primary_region"], config["secondary_region"]]:
-        _delete_log_groups(config["stack_prefix"], region)
-        step_done(f"Log groups purged in {region}")
-
-
-# ---------------------------------------------------------------------------
-# Main entry point
 # ---------------------------------------------------------------------------
 def main() -> None:
     """
@@ -1237,9 +1056,10 @@ def main() -> None:
         validate_prerequisites()
 
         if args.teardown:
-            config = collect_inputs(args)
-            teardown_all(config)
-            return
+            # Delegate to standalone teardown.py for reliable resource cleanup
+            teardown_script = os.path.join(os.path.dirname(__file__), "teardown.py")
+            teardown_cmd = [sys.executable, teardown_script, "--profile", args.profile]
+            sys.exit(subprocess.run(teardown_cmd).returncode)  # nosemgrep: dangerous-subprocess-use-audit
 
         config = collect_inputs(args)
 
@@ -1271,30 +1091,32 @@ def main() -> None:
             # Create change set without executing
             stack_name = config["primary_stack"]
             container_image = f"{config['account_id']}.dkr.ecr.{config['primary_region']}.amazonaws.com/{config['stack_prefix']}-app:latest"
-            params = " ".join([
+            params = [
                 f"PrimaryRegion={config['primary_region']}",
                 f"SecondaryRegion={config['secondary_region']}",
                 f"StackPrefix={config['stack_prefix']}",
                 f"VpcCidr=10.0.0.0/16",
                 f"ContainerImageUri={container_image}",
-            ])
+            ]
             cs_name = f"dry-run-{int(time.time())}"
             cs_type = "UPDATE" if stack_exists(stack_name, config["primary_region"]) else "CREATE"
             try:
                 run_aws(
-                    f"cloudformation create-change-set "
-                    f"--stack-name {stack_name} "
-                    f"--change-set-name {cs_name} "
-                    f"--change-set-type {cs_type} "
-                    f"--template-body file://{packaged} "
-                    f"--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND "
-                    f"--parameter-overrides {params}",
+                    ["cloudformation", "create-change-set",
+                     "--stack-name", stack_name,
+                     "--change-set-name", cs_name,
+                     "--change-set-type", cs_type,
+                     "--template-body", f"file://{packaged}",
+                     "--capabilities", "CAPABILITY_IAM", "CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND",
+                     "--parameter-overrides"] + params,
                     region=config["primary_region"]
                 )
                 # Wait for change set to be created
                 time.sleep(5)  # nosemgrep: arbitrary-sleep
                 cs = run_aws(
-                    f"cloudformation describe-change-set --stack-name {stack_name} --change-set-name {cs_name}",
+                    ["cloudformation", "describe-change-set",
+                     "--stack-name", stack_name,
+                     "--change-set-name", cs_name],
                     region=config["primary_region"]
                 )
                 print("\n" + "=" * 60)
@@ -1410,6 +1232,22 @@ def main() -> None:
                 step_done("Container built + Secondary region standing by (parallel)")
 
                 logger.warning("Secondary region deployment complete!")
+
+                # Re-deploy primary with SecondaryVpcOriginId to activate CloudFront origin group.
+                # On first deploy, primary didn't have the secondary VPC Origin ID (chicken-and-egg).
+                # This update adds the secondary origin for automatic data-plane failover.
+                secondary_vpc_origin_id = secondary_outputs.get("VpcOriginId", "")
+                if secondary_vpc_origin_id:
+                    progress.update(task, description="[5b/8] Enabling CloudFront origin group failover")
+                    logger.warning("Updating primary stack with CloudFront origin group failover...")
+                    deploy_master_stack(
+                        config, config["primary_region"], packaged,
+                        SourceBucket=source_bucket,
+                        SourceKey=source_key,
+                        ContainerImageUri=container_image,
+                        SecondaryVpcOriginId=secondary_vpc_origin_id,
+                    )
+                    step_done("CloudFront origin group active — auto-failover enabled")
 
                 # --- Pause progress for ARC deployment ---
                 progress.update(task, description="[6/8] Deploying FlightAware + ARC")
