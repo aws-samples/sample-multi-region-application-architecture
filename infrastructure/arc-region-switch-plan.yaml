@@ -347,7 +347,7 @@ Resources:
               ExecutionBlockConfiguration:
                 ExecutionApprovalConfig:
                   ApprovalRole: !Ref ApprovalRoleArn
-                  TimeoutMinutes: 20
+                  TimeoutMinutes: 10
 
             # Step 4: Scale ECS in recovery region
             - Name: scale-up-ecs-failback
@@ -370,7 +370,7 @@ Resources:
               ExecutionBlockConfiguration:
                 ExecutionApprovalConfig:
                   ApprovalRole: !Ref ApprovalRoleArn
-                  TimeoutMinutes: 20
+                  TimeoutMinutes: 10
 
             # Step 6: Post-failback - toggle FlightAware and scale down source
             - Name: post-failback-tasks

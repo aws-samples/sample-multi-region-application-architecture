@@ -6,28 +6,12 @@ This is the **operator runbook** for executing and managing ARC Region Switch fa
 
 ## Table of Contents
 
-1. [Quick Reference](#quick-reference)
-2. [How to Start a Failover](#how-to-start-a-failover)
-3. [Plan Steps and Timeouts](#plan-steps-and-timeouts)
-4. [Approving Manual Gates](#approving-manual-gates)
-5. [How CloudFront Failover Works](#how-cloudfront-failover-works)
-6. [Execution Reports](#execution-reports)
-7. [References](#references)
-
----
-
-## Quick Reference
-
-| | |
-|---|---|
-| **DR Pattern** | Pilot Light (Active/Passive) |
-| **Primary Region** | us-east-1 (N. Virginia) |
-| **Recovery Region** | us-east-2 (Ohio) |
-| **RTO Target** | 15 minutes |
-| **RPO Target** | Near-zero (DocumentDB Global Cluster continuous replication) |
-| **Trigger** | Manual — operator-initiated from ARC console or CLI |
-| **Plan Name** | `airporthub-region-switch` |
-| **Execution Reports** | S3 bucket: `airporthub-arc-reports-<ACCOUNT_ID>` |
+1. [How to Start a Failover](#how-to-start-a-failover)
+2. [Plan Steps and Timeouts](#plan-steps-and-timeouts)
+3. [Approving Manual Gates](#approving-manual-gates)
+4. [How CloudFront Failover Works](#how-cloudfront-failover-works)
+5. [Execution Reports](#execution-reports)
+6. [References](#references)
 
 ---
 
@@ -39,28 +23,13 @@ This is the **operator runbook** for executing and managing ARC Region Switch fa
 2. Open **Application Recovery Controller** > **Region switch**
 3. Select the `airporthub-region-switch` plan
 4. Choose **Execute plan**
-5. Approve manual steps as they come up (see [Approving Manual Gates](#approving-manual-gates))
-
-### From the CLI
-
-```bash
-aws arc-region-switch start-plan-execution \
-  --plan-arn <PLAN_ARN> \
-  --target-region us-east-2
-```
-
-> [!NOTE]
-> The plan ARN is output by the `airporthub-arc-plan` CloudFormation stack. Retrieve it with:
-> ```bash
-> aws cloudformation describe-stacks \
->   --stack-name airporthub-arc-plan \
->   --query 'Stacks[0].Outputs[?OutputKey==`PlanArn`].OutputValue' \
->   --output text
-> ```
 
 ---
 
 ## Plan Steps and Timeouts
+
+### Graceful Failover
+A graceful execution is a planned execution workflow. When your environment is healthy, you can use the graceful workflow to run all steps for an orderly plan execution.
 
 Both failover and failback follow a symmetric 6-step structure. The plan orchestrates dependency ordering — DocumentDB switches before compute activates, with human approval gates between stages.
 
@@ -68,37 +37,32 @@ Both failover and failback follow a symmetric 6-step structure. The plan orchest
 |---|---|---|---|
 | 1 | DocumentDB Global Cluster Switchover | 10 min | `switchoverOnly` behavior (zero data loss); ungraceful failover option available |
 | 2 | Seed Live Flight Data (FlightAware Lambda) | 5 min | Runs in activating region; 5 min retry interval |
-| 3 | **Manual Approval** | See below | Operator confirms DB + data health |
+| 3 | **Manual Approval** | 10 min | Operator confirms DB + data health |
 | 4 | ECS Scale Up (target region) | 10 min | Uses `sampledMaxInLast24Hours` at 100% capacity |
-| 5 | **Manual Approval** | See below | Operator confirms application health |
+| 5 | **Manual Approval** | 10 min | Operator confirms application health |
 | 6 | Parallel: FlightAware Child Plan + Scale Down Source ECS | 60 min | Skipped on ungraceful failover |
-
-### Approval Timeout Differences
-
-> [!IMPORTANT]
-> Failover and failback have **different** approval timeouts. Failback allows more time because operators may need to validate data consistency after switching back.
-
-| Approval Gate | Failover (activate us-east-2) | Failback (activate us-east-1) |
-|---|---|---|
-| Step 3 | 10 min | **20 min** |
-| Step 5 | 10 min | **20 min** |
-
-### Step Names by Direction
-
-| Step | Failover (activate us-east-2) | Failback (activate us-east-1) |
-|---|---|---|
-| 3 | `FailoverApproval` | `FailbackApproval` |
-| 5 | `FinalApproval` | `FinalApprovalFailback` |
-
-### Step 6 — Parallel Cleanup
 
 Step 6 runs two actions in parallel:
 
 1. **FlightAware Child Plan** (`flightaware-app-switchover`) — a nested ARC plan that enables the EventBridge schedule in the target region and disables it in the source region
 2. **Scale Down Source ECS** — a custom Lambda that sets the source region ECS desired count to 0, returning it to Pilot Light state
 
-> [!NOTE]
-> Step 6 is **skipped on ungraceful failover**. If the source region is unavailable, the schedule disable and ECS scale-down cannot execute. You must clean these up manually once the source region recovers.
+
+### Ungraceful Failover
+
+An **ungraceful execution** is an unplanned execution triggered when the source region is unavailable. The ungraceful workflow mode uses only the necessary steps and actions — it either changes the behavior of execution blocks or skips them entirely. The plan handles this automatically with degraded behavior:
+
+| Step | Normal (Graceful) | Ungraceful |
+|---|---|---|
+| 1 — DocumentDB | `switchoverOnly` — zero data loss, both clusters must be healthy | `failover` — forced promotion of secondary to writer. **Potential data loss** equal to replication lag at time of failure |
+| 6 — Scale Down Source ECS | Scales source ECS to 0 | **Skipped** — source region is unreachable |
+| 6 — FlightAware Child Plan | Disables schedule in source, enables in target | **Skipped** — source region is unreachable |
+
+> [!WARNING]
+> After an ungraceful failover, once the source region recovers you must manually:
+> 1. Scale down ECS in the former primary region (set desired count to 0)
+> 2. Disable the EventBridge scheduled refresh in the former primary region
+> 3. Remove the old DocumentDB cluster from the global cluster and re-add it as a secondary
 
 ---
 
