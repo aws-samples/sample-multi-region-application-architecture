@@ -106,17 +106,6 @@ aws iam get-role --role-name ROLE_NAME --query 'Role.Arn'
 - [ ] ALB health check passing — target group shows healthy targets
 - [ ] Application responds — `https://<cloudfront-domain>/api/health` returns `{"status": "healthy"}`
 
-### What Happens If You Decline
-
-Declining an approval gate **stops the execution immediately**. The system does NOT roll back — whatever steps completed before the gate remain in effect.
-
-- **Decline at Step 3**: DocumentDB has already switched over but compute is still in the old region. Start a new execution targeting the original region to reverse Step 1.
-- **Decline at Step 5**: ECS is scaled up in the target region, but cleanup (Step 6) won't run. Manually scale down the source ECS or start a new failback execution.
-
-### Timeout Behavior
-
-If an approval gate is not approved or declined within its timeout window, the execution **fails**. You can investigate and start a new execution from the plan page.
-
 ---
 
 ## How CloudFront Failover Works
