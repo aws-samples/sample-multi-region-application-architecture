@@ -129,9 +129,9 @@ The CloudFront distribution is configured with:
 
 - **Primary origin** (`alb-primary`): VPC Origin pointing to the internal ALB in us-east-1
 - **Secondary origin** (`alb-secondary`): VPC Origin pointing to the internal ALB in us-east-2
-- **Origin group** (`alb-origin-group`): Wraps both origins with automatic failover on HTTP 502, 503, or 504
+- **Origin group** (`alb-origin-group`): Wraps both origins with automatic failover on HTTP 500, 502, 503, or 504
 
-When CloudFront receives a request that matches the default cache behavior (GET/HEAD/OPTIONS), it routes to the primary origin. If the primary returns 502/503/504, CloudFront **automatically retries** the same request against the secondary origin — no control-plane API call needed.
+When CloudFront receives a request that matches the default cache behavior (GET/HEAD/OPTIONS), it routes to the primary origin. If the primary returns 500/502/503/504, CloudFront **automatically retries** the same request against the secondary origin — no control-plane API call needed.
 
 ### Write Operations (POST/PUT/DELETE)
 
