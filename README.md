@@ -165,12 +165,10 @@ The database is the centerpiece of the DR strategy. Key properties:
 
 ### CloudFront as the Traffic Switch
 
-CloudFront sits in front of both ALBs via **VPC Origins** — a private connectivity path that routes traffic over AWS's internal backbone without exposing the ALBs to the public internet. Both ALBs are internal (no public IP) and only reachable through CloudFront's managed network interfaces.
-
-**Origin Group Failover (Data Plane):** CloudFront is configured with an origin group containing both VPC Origins (primary in us-east-1, secondary in us-east-2). On 502/503/504 from the primary, CloudFront automatically retries the request against the secondary origin — no control plane API call needed.
+CloudFront sits in front of both ALBs via [**VPC Origins**](https://aws.amazon.com/blogs/networking-and-content-delivery/introducing-cloudfront-virtual-private-cloud-vpc-origins-shield-your-web-applications-from-public-internet/) — a private connectivity path that routes traffic over AWS's internal backbone without exposing the ALBs to the public internet. An origin group wraps both VPC Origins (us-east-1 primary, us-east-2 secondary) and retries on 502/503/504 — no control plane API dependency needed. This aligns with [Reliability Pillar]((https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_withstand_component_failures_avoid_control_plane.html)) in AWS Well-Architected Framework.
 
 > [!IMPORTANT]
-> **CloudFront origin group failover only covers GET/HEAD/OPTIONS requests.** POST/PUT/DELETE operations (crew assignments, airport CRUD) will not auto-failover. These write operations become available after the ARC plan scales ECS in the recovery region. The dashboard is read-heavy, so this covers the critical path during DR.
+> **Origin group failover only covers GET/HEAD/OPTIONS.** Write operations (`/api/*` paths) route directly to the primary origin and resume after ARC scales ECS in the recovery region. See [How CloudFront Failover Works](docs/Region-Switch-Failover.md#how-cloudfront-failover-works).
 
 ### ARC Region Switch — Replacing the Runbook
 
