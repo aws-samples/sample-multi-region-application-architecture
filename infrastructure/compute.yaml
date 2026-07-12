@@ -533,8 +533,8 @@ Resources:
               - Id: alb-origin-group
                 FailoverCriteria:
                   StatusCodes:
-                    Items: [502, 503, 504]
-                    Quantity: 3
+                    Items: [500, 502, 503, 504]
+                    Quantity: 4
                 Members:
                   Quantity: 2
                   Items:
