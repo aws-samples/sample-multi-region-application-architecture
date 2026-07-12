@@ -33,8 +33,8 @@ Traditional disaster recovery relies on manual runbooks — ad-hoc steps that ar
 This is a hands-on reference for teams who want to understand:
 
 - What Pilot Light DR looks like in practice across a real multi-service application
-- How AWS ARC Region Switch orchestrates failover across multiple microservices and third-party dependencies.
-- How to keep secondary region compute costs near zero while still achieving a 15-minute RTO
+- How [AWS ARC Region Switch](https://docs.aws.amazon.com/r53recovery/latest/dg/what-is-route53-recovery.html) orchestrates failover across multiple microservices and third-party dependencies.
+- How to keep secondary region compute costs near zero while still achieving a low RTO
 
 ---
 
@@ -46,16 +46,16 @@ AirportHub is a sample multi-region Airport Operations Dashboard that serves as 
 
 - **Flight Board** — live flight data via [FlightAware AeroAPI](https://www.flightaware.com/aeroapi/) (paid, optional)
 - **Crew Operations** — crew assignment management (mock data)
-- **Airport Directory** — airport information (static data)
+- **Airport Directory** — airport information (static data, but you have the ability to add more airports)
 - **Auth** — Amazon Cognito-backed login
 
 ### Stack
 
 - **Frontend**: React (Vite), deployed via ECS Fargate + CloudFront
-- **API Layer**: 3 AWS Lambda functions (airports, flights, crew) behind an ALB
+- **API Layer**: 3 [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html) functions (airports, flights, crew) behind an ALB
 - **Database**: Amazon DocumentDB (MongoDB-compatible)
 - **Auth**: Amazon Cognito User Pool
-- **Scheduled Refresh**: EventBridge-triggered Lambda for hourly flight data refresh
+- **FlightAware Scheduled Refresh**: EventBridge-triggered Lambda for hourly flight data refresh
 
 ### FlightAware Integration
 
@@ -188,29 +188,25 @@ Rather than a wiki page of manual steps, the entire failover sequence is codifie
 
 The plan is manually triggered by an authorized operator — there are no automatic triggers. Both failover and failback use the same 6-step structure.
 
-### Failover: Activate us-east-2
+### Failover: Activate us-east-2 (secondary region)
 
 ```
-Step 1 — DocumentDB Global Cluster Switchover
+Step 1 — DocumentDB Global Cluster Switchover (10 min timeout)
          ├── Promote us-east-2 secondary → primary writer
-         ├── Behavior: switchoverOnly (zero data loss; requires both clusters healthy)
-         └── Timeout: 10 minutes
+         └── Behavior: switchoverOnly (zero data loss; requires both clusters healthy)
 
-Step 2 — Seed Live Flight Data
+Step 2 — Seed Live Flight Data (5 min timeout)
          ├── Invoke Flights Lambda in the activating region
          ├── Fetches live data from FlightAware AeroAPI
          └── Writes to the newly promoted DocumentDB primary
 
-Step 3 — 🔐 Manual Approval: FailoverApproval
+Step 3 — 🔐 Manual Approval: FailoverApproval (10 min timeout)
          └── Operator confirms DB switchover + live data before activating compute
 
-Step 4 — Parallel Execution
-         ├── ECS Scale Up (us-east-2: 0 → production capacity)
-         │   └── Uses sampledMaxInLast24Hours for target task count
-         └── CloudFront Origin Switch
-             └── Custom Lambda updates CloudFront to route traffic → alb-us-east-2
+Step 4 — ECS Scale Up (us-east-2: 0 → production capacity, 10 min timeout)
+         └── Uses sampledMaxInLast24Hours for target task count
 
-Step 5 — 🔐 Manual Approval: FinalApproval
+Step 5 — 🔐 Manual Approval: FinalApproval (10 min timeout)
          └── Operator confirms application is healthy in us-east-2
 
 Step 6 — Post-Failover Cleanup (Parallel)
@@ -222,7 +218,7 @@ Step 6 — Post-Failover Cleanup (Parallel)
 
 ### Failback: Activate us-east-1
 
-Identical 6-step structure in reverse — promotes us-east-1 back to primary, switches CloudFront origin, toggles the FlightAware schedule, and scales down us-east-2.
+Identical 6-step structure in reverse — promotes us-east-1 back to primary, toggles the FlightAware schedule, and scales down us-east-2.
 
 ### FlightAware Child Plan
 

@@ -55,9 +55,9 @@ Both failover and failback follow a 6-step structure. Step names differ slightly
 |---|---|---|---|
 | 1 | DocumentDB Global Cluster Switchover | 10 min | — |
 | 2 | Seed Live Flight Data (FlightAware Lambda) | 5 min | 5 min |
-| 3 | **Manual Approval** | 20 min | — |
-| 4 | Parallel: ECS Scale Up + CloudFront Origin Switch | 10 min (ECS), 5 min (CF) | 2 min (CF) |
-| 5 | **Manual Approval** | 20 min | — |
+| 3 | **Manual Approval** | 10 min | — |
+| 4 | ECS Scale Up | 10 min | — |
+| 5 | **Manual Approval** | 10 min | — |
 | 6 | Parallel: FlightAware Child Plan + Scale Down Source ECS | 60 min | 10 min (scale-down) |
 
 ### Step Names by Direction
@@ -89,19 +89,18 @@ Steps 3 and 5 pause execution and wait for an authorized operator to approve. Ap
 ### What to Verify Before Step 5 Approval
 
 - [ ] ECS service in target region shows desired task count running (ECS console > Clusters > `airporthub-cluster` > Service)
-- [ ] CloudFront origin updated — CloudFront console > Distribution > Origins tab shows target region ALB
-- [ ] Health check passes — `https://<cloudfront-domain>/api/health` returns `{"status": "healthy"}`
+- [ ] CloudFront origin group is routing traffic — `https://<cloudfront-domain>/api/health` returns `{"status": "healthy"}`
 
 ### What Happens If You Decline
 
 Declining an approval gate **stops the execution immediately**. The system does NOT roll back — whatever steps completed before the gate remain in effect. For example:
 
 - If you decline at Step 3: DocumentDB has already switched over but compute is still in the old region. You would need to start a new execution targeting the original region to reverse Step 1.
-- If you decline at Step 5: ECS is scaled up and CloudFront is switched, but cleanup (Step 6) won't run. You'd need to manually scale down the source ECS or start a new failback execution.
+- If you decline at Step 5: ECS is scaled up in the target region, but cleanup (Step 6) won't run. You'd need to manually scale down the source ECS or start a new failback execution.
 
 ### Timeout Behavior
 
-If an approval gate is not approved or declined within **20 minutes**, the execution fails. You can investigate and start a new execution from the plan page.
+If an approval gate is not approved or declined within **10 minutes**, the execution fails. You can investigate and start a new execution from the plan page.
 
 ### Who Can Approve
 
@@ -120,13 +119,41 @@ Using a short ARN (without the `/aws-reserved/sso.amazonaws.com/` path) causes `
 
 ---
 
-## How CloudFront Origin Switch Works
+## How CloudFront Failover Works
 
-The CloudFront switch Lambda (Step 4) updates the distribution's single origin in-place by swapping both the **VPC Origin ID** and the **ALB domain name** to point to the target region. Both regions have a pre-created VPC Origin (named `airporthub-vpc-origin-<region>`) pointing to their internal ALB. The Lambda looks up the target ALB DNS, resolves the target VPC Origin ID by name, then calls `UpdateDistribution` to apply both changes.
+CloudFront failover is handled at the **data plane** via an origin group — there is no ARC step or Lambda that switches the CloudFront origin during failover.
 
-[![CloudFront Origin Switch Flow](generated-diagrams/CFSwitch.png)](generated-diagrams/CFSwitch.png)
+### Origin Group Configuration
 
-This is instant (no DNS TTL) because CloudFront VPC Origins route over AWS's internal backbone — the ALBs are never exposed to the public internet.
+The CloudFront distribution is configured with:
+
+- **Primary origin** (`alb-primary`): VPC Origin pointing to the internal ALB in us-east-1
+- **Secondary origin** (`alb-secondary`): VPC Origin pointing to the internal ALB in us-east-2
+- **Origin group** (`alb-origin-group`): Wraps both origins with automatic failover on HTTP 502, 503, or 504
+
+When CloudFront receives a request that matches the default cache behavior (GET/HEAD/OPTIONS), it routes to the primary origin. If the primary returns 502/503/504, CloudFront **automatically retries** the same request against the secondary origin — no control-plane API call needed.
+
+### Write Operations (POST/PUT/DELETE)
+
+Origin groups only support GET/HEAD/OPTIONS methods. Write operations are routed via separate cache behaviors that point directly to the primary origin (`alb-primary`). During a DR event, writes are unavailable until ARC scales up ECS in the recovery region. This is a documented tradeoff — the dashboard is read-heavy, so origin group failover covers the critical read path.
+
+### Why No Control-Plane Switch?
+
+VPC Origins route traffic over AWS's internal backbone. Both ALBs are internal (no public IP) and only reachable through CloudFront's managed network interfaces. Because the origin group handles failover automatically at request time:
+
+- There is **no DNS TTL delay** — failover is instant per-request
+- There is **no Lambda** that calls `UpdateDistribution`
+- The ARC plan does not include a CloudFront step
+
+### Two-Phase Deployment
+
+The origin group requires VPC Origins in both regions. Since the secondary VPC Origin doesn't exist until the secondary stack deploys, `deploy.py` uses a two-phase approach:
+
+1. Deploy primary (CloudFront with single origin, no origin group)
+2. Deploy secondary (creates its VPC Origin, outputs `VpcOriginId`)
+3. Re-deploy primary with `SecondaryVpcOriginId` parameter (activates origin group)
+
+[![CloudFront Origin Group Failover](generated-diagrams/cloudfront-origin-group-failover.png)](generated-diagrams/cloudfront-origin-group-failover.png)
 
 ---
 
