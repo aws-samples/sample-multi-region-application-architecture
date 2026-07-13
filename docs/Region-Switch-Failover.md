@@ -126,7 +126,7 @@ When CloudFront receives a GET/HEAD/OPTIONS request, it routes to the primary or
 ### Write Operations (POST/PUT/DELETE)
 
 > [!IMPORTANT]
-> **Origin group failover only covers GET/HEAD/OPTIONS.** Write operations route directly to the primary origin and are unavailable until ARC scales ECS in the recovery region.
+> **Origin group failover only covers GET/HEAD/OPTIONS.** Write operations route directly to the primary origin and are unavailable during failover to us-east-2. This is an [AWS-documented limitation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/RequestAndResponseBehaviorOriginGroups.html) — CloudFront does not fail over when the viewer sends POST, PUT, or DELETE.
 
 Write paths are configured as 6 separate cache behaviors that all point directly to `alb-primary`:
 
@@ -134,7 +134,7 @@ Write paths are configured as 6 separate cache behaviors that all point directly
 - `/api/airports`, `/api/airports/*`
 - `/api/crew`, `/api/crew/*`
 
-This is a documented tradeoff — the dashboard is read-heavy, so the origin group covers the critical read path. Writes resume once Step 4 (ECS scale-up) completes and CloudFront's origin group routes to the newly active secondary.
+This is a documented tradeoff — the dashboard is read-heavy, so the origin group covers the critical read path. Writes are unavailable during failover and resume only after failback to us-east-1 (the region `alb-primary` points to).
 
 ### Why No Control-Plane Switch in the ARC Plan
 

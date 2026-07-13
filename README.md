@@ -168,7 +168,7 @@ The database is the centerpiece of the DR strategy. Key properties:
 CloudFront sits in front of both ALBs via [**VPC Origins**](https://aws.amazon.com/blogs/networking-and-content-delivery/introducing-cloudfront-virtual-private-cloud-vpc-origins-shield-your-web-applications-from-public-internet/) — a private connectivity path that routes traffic over AWS's internal backbone without exposing the ALBs to the public internet. An origin group wraps both VPC Origins (us-east-1 primary, us-east-2 secondary) and retries on 500/502/503/504 — no control plane API dependency needed. This aligns with [Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_withstand_component_failures_avoid_control_plane.html) in AWS Well-Architected Framework.
 
 > [!IMPORTANT]
-> **Origin group failover only covers GET/HEAD/OPTIONS.** Write operations (`/api/*` paths) route directly to the primary origin and resume after ARC scales ECS in the recovery region. See [How CloudFront Failover Works](docs/Region-Switch-Failover.md#how-cloudfront-failover-works).
+> **Origin group failover only covers GET/HEAD/OPTIONS.** Write operations (`/api/*` paths) route directly to the primary origin and are unavailable during failover to us-east-2. This is an [AWS-documented limitation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/RequestAndResponseBehaviorOriginGroups.html) — CloudFront does not fail over when the viewer sends POST, PUT, or DELETE. See [How CloudFront Failover Works](docs/Region-Switch-Failover.md#how-cloudfront-failover-works).
 
 ### ARC Region Switch — Replacing the Runbook
 
