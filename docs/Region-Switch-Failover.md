@@ -136,27 +136,6 @@ Write paths are configured as 6 separate cache behaviors that all point directly
 
 This is a documented tradeoff — the dashboard is read-heavy, so the origin group covers the critical read path. Writes are unavailable during failover and resume only after failback to us-east-1 (the region `alb-primary` points to).
 
-### Why No Control-Plane Switch in the ARC Plan
-
-VPC Origins route traffic over AWS's internal backbone. Both ALBs are **internal-only** (no public IP) and only reachable through CloudFront's managed network interfaces. Because the origin group handles failover automatically at request time:
-
-- There is **no DNS TTL delay** — failover is instant per-request
-- There is **no Lambda** that calls `UpdateDistribution`
-- The ARC plan does not include a CloudFront step
-
-This aligns with the [Well-Architected Reliability Pillar guidance](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_withstand_component_failures_avoid_control_plane.html) to use data-plane mechanisms over control-plane dependencies during failures.
-
-### Two-Phase Deployment
-
-The origin group requires VPC Origins in both regions. Since the secondary VPC Origin doesn't exist until the secondary stack deploys, `deploy.py` uses a two-phase approach:
-
-1. **Deploy primary** — CloudFront with single origin, no origin group
-2. **Deploy secondary** — creates its VPC Origin, outputs `VpcOriginId`
-3. **Re-deploy primary** with `SecondaryVpcOriginId` parameter — activates the origin group
-
-> [!NOTE]
-> This two-phase deployment is handled automatically by `deploy.py`. You only need to be aware of it if deploying manually or troubleshooting the CloudFormation stacks.
-
 ---
 
 ## Execution Reports

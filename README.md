@@ -165,10 +165,35 @@ The database is the centerpiece of the DR strategy. Key properties:
 
 ### CloudFront as the Traffic Switch
 
-CloudFront sits in front of both ALBs via [**VPC Origins**](https://aws.amazon.com/blogs/networking-and-content-delivery/introducing-cloudfront-virtual-private-cloud-vpc-origins-shield-your-web-applications-from-public-internet/) — a private connectivity path that routes traffic over AWS's internal backbone without exposing the ALBs to the public internet. An origin group wraps both VPC Origins (us-east-1 primary, us-east-2 secondary) and retries on 500/502/503/504 — no control plane API dependency needed. This aligns with [Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_withstand_component_failures_avoid_control_plane.html) in AWS Well-Architected Framework.
+CloudFront sits in front of both Application Load Balancers through [**VPC Origins**](https://aws.amazon.com/blogs/networking-and-content-delivery/introducing-cloudfront-virtual-private-cloud-vpc-origins-shield-your-web-applications-from-public-internet/) — a private connectivity path that routes traffic over AWS's internal backbone, keeping the ALBs off the public internet. An origin group wraps both VPC Origins (us-east-1 as primary, us-east-2 as secondary) and automatically retries on 500, 502, 503, and 504 errors — no control-plane API call required to trigger failover. This approach aligns with the [Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_withstand_component_failures_avoid_control_plane.html) of the AWS Well-Architected Framework.
 
 > [!IMPORTANT]
-> **Origin group failover only covers GET/HEAD/OPTIONS.** Write operations (`/api/*` paths) route directly to the primary origin and are unavailable during failover to us-east-2. This is an [AWS-documented limitation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/RequestAndResponseBehaviorOriginGroups.html) — CloudFront does not fail over when the viewer sends POST, PUT, or DELETE. See [How CloudFront Failover Works](docs/Region-Switch-Failover.md#how-cloudfront-failover-works).
+> Origin group failover applies only to GET, HEAD, and OPTIONS requests. Write operations (e.g., `/api/*` paths) route directly to the primary origin and become unavailable if us-east-2 is serving traffic during a failover event. This is an [AWS-documented constraint](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/RequestAndResponseBehaviorOriginGroups.html) — CloudFront does not fail over requests that use POST, PUT, or DELETE methods. See [How CloudFront Failover Works](docs/Region-Switch-Failover.md#how-cloudfront-failover-works) for details.
+
+#### CloudFront Origin Group vs Route 53 DNS Failover
+
+This project uses CloudFront origin group failover for read traffic. The table below compares it with Route 53 DNS failover — an alternative pattern that supports all HTTP methods.
+
+| Dimension | CloudFront Origin Group | Route 53 DNS Failover |
+|---|---|---|
+| **Failover trigger** | Per-request (data plane) | Health check threshold (data plane) |
+| **Failover speed** | Instant — retries on same request | ~70 seconds minimum (polling + DNS TTL) |
+| **HTTP methods** | GET/HEAD/OPTIONS only | All methods including POST/PUT/DELETE |
+| **Statefulness** | Stateless — each request fails independently | Stateful — all traffic switches once unhealthy |
+| **Latency on failure** | Added per failed request (tries primary first) | None once DNS resolves to secondary |
+| **Control plane dependency** | None | None |
+| **Write failover** | ❌ Not supported | ✅ Supported |
+
+**Why this project uses origin group:** The dashboard is read-heavy. Origin group provides instant, zero-configuration failover for reads with no DNS TTL delay and no control plane dependency. Write operations are unavailable during failover — a documented tradeoff acceptable for this use case.
+
+> [!NOTE]
+> These two patterns can be combined (hybrid approach) to get instant read failover via origin group and stateful write failover via Route 53. See the AWS blogs below for implementation details.
+
+**Further reading:**
+
+- [Three advanced design patterns for high available applications using Amazon CloudFront](https://aws.amazon.com/blogs/networking-and-content-delivery/three-advanced-design-patterns-for-high-available-applications-using-amazon-cloudfront/) — Covers origin group, Route 53 DNS failover, and the hybrid pattern combining both
+- [Improve web application availability with CloudFront and Route53 hybrid origin failover](https://aws.amazon.com/blogs/networking-and-content-delivery/improve-web-application-availability-with-cloudfront-and-route53-hybrid-origin-failover/) — Step-by-step hybrid implementation
+- [Creating Disaster Recovery Mechanisms Using Amazon Route 53](https://aws.amazon.com/blogs/networking-and-content-delivery/creating-disaster-recovery-mechanisms-using-amazon-route-53/) — Route 53 health check mechanics and ARC integration
 
 ### ARC Region Switch — Replacing the Runbook
 
