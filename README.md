@@ -177,14 +177,14 @@ This project uses CloudFront origin group failover for read traffic. The table b
 | Dimension | CloudFront Origin Group | Route 53 DNS Failover |
 |---|---|---|
 | **Failover trigger** | Per-request (data plane) | Health check threshold (data plane) |
-| **Failover speed** | Instant — retries on same request | ~70 seconds minimum (polling + DNS TTL) |
+| **Failover speed** | Instant — retries on same request | Delayed — depends on health check interval + DNS TTL propagation |
 | **HTTP methods** | GET/HEAD/OPTIONS only | All methods including POST/PUT/DELETE |
 | **Statefulness** | Stateless — each request fails independently | Stateful — all traffic switches once unhealthy |
 | **Latency on failure** | Added per failed request (tries primary first) | None once DNS resolves to secondary |
 | **Control plane dependency** | None | None |
 | **Write failover** | ❌ Not supported | ✅ Supported |
 
-**Why this project uses origin group:** The dashboard is read-heavy. Origin group provides instant, zero-configuration failover for reads with no DNS TTL delay and no control plane dependency. Write operations are unavailable during failover — a documented tradeoff acceptable for this use case.
+**Why this project uses origin group:** The dashboard is read-heavy. Origin group provides instant per-request failover for reads with no DNS delay and no control plane dependency. Write operations are unavailable during failover — an acceptable tradeoff for this demo use case.
 
 > [!NOTE]
 > These two patterns can be combined (hybrid approach) to get instant read failover via origin group and stateful write failover via Route 53. See the AWS blogs below for implementation details.
