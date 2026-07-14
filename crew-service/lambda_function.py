@@ -291,7 +291,11 @@ def health_check(event):
         })
     except Exception as e:
         logger.error("Health check failed: %s", e)
-        return _response(503, {"status": "unhealthy", "error": str(e)})
+        return _response(503, {
+            "status": "unhealthy",
+            "region": os.environ.get("AWS_REGION", "unknown"),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
 
 
 # ---------------------------------------------------------------------------

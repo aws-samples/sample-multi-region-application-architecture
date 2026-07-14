@@ -245,7 +245,6 @@ def health_check():
         logger.error(f"Health check failed: {str(e)}")
         return jsonify({
             'status': 'unhealthy',
-            'error': str(e),
             'region': AWS_REGION,
             'timestamp': datetime.utcnow().isoformat()
         }), 503

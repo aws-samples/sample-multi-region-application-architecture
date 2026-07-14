@@ -1046,7 +1046,7 @@
       "max_range_hours": 17
     }
   ],
-  "assignments": [
+  "crew_assignments": [
     {
       "flight_number": "AA1042",
       "flight_date": "2026-04-24",

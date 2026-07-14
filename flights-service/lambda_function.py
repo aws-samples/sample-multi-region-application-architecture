@@ -316,7 +316,7 @@ def health_check(event):
         logger.error("Health check failed: %s", e)
         return _response(503, {
             "status": "unhealthy",
-            "error": str(e),
+            "region": os.environ.get("AWS_REGION", "unknown"),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 

@@ -1,21 +1,17 @@
-# Failover Operations Guide — ARC Region Switch
+# Failover Operations Runbook — ARC Region Switch
 
-This document is the **operator runbook** for executing and managing ARC Region Switch failovers. For architecture details and design decisions, see the [main README](../README.md#arc-region-switch-walkthrough).
+This is the **operator runbook** for executing and managing ARC Region Switch failovers for the AirportHub application. For architecture context, design decisions, and the full project overview, see the [main README](../README.md).
 
 ---
 
-## Quick Reference
+## Table of Contents
 
-| | |
-|---|---|
-| **DR Pattern** | Pilot Light (Active/Passive) |
-| **Primary Region** | us-east-1 (N. Virginia) |
-| **Recovery Region** | us-east-2 (Ohio) |
-| **RTO Target** | 15 minutes |
-| **RPO Target** | Near-zero (DocumentDB Global Cluster continuous replication) |
-| **Trigger** | Manual — operator-initiated from ARC console |
-| **Plan Name** | `airporthub-region-switch` |
-| **Execution Reports** | S3 bucket: `airporthub-arc-reports-<ACCOUNT_ID>` |
+1. [How to Start a Failover](#how-to-start-a-failover)
+2. [Plan Steps and Timeouts](#plan-steps-and-timeouts)
+3. [Approving Manual Gates](#approving-manual-gates)
+4. [How CloudFront Failover Works](#how-cloudfront-failover-works)
+5. [Execution Reports](#execution-reports)
+6. [References](#references)
 
 ---
 
@@ -27,50 +23,68 @@ This document is the **operator runbook** for executing and managing ARC Region 
 2. Open **Application Recovery Controller** > **Region switch**
 3. Select the `airporthub-region-switch` plan
 4. Choose **Execute plan**
-5. If prompted, approve manual steps as they come up (see [Approving Manual Gates](#approving-manual-gates) below)
-
-### From the CLI
-
-```bash
-aws arc-region-switch start-plan-execution \
-  --plan-arn <PLAN_ARN> \
-  --target-region us-east-2
-```
-
-> **Note**: The plan ARN is output by the `airporthub-arc-plan` CloudFormation stack. Retrieve it with:
-> ```bash
-> aws cloudformation describe-stacks \
->   --stack-name airporthub-arc-plan \
->   --query 'Stacks[0].Outputs[?OutputKey==`PlanArn`].OutputValue' \
->   --output text
-> ```
 
 ---
 
-## Plan Steps & Timeouts
+## Plan Steps and Timeouts
 
-Both failover and failback follow a 6-step structure. Step names differ slightly per direction.
+### Graceful Failover
+A graceful execution is a planned execution workflow. When your environment is healthy, you can use the graceful workflow to run all steps for an orderly plan execution.
 
-| Step | Action | Timeout | Retry Interval |
+Both failover and failback follow a symmetric 6-step structure. The plan orchestrates dependency ordering — DocumentDB switches before compute activates, with human approval gates between stages.
+
+| Step | Action | Timeout | Notes |
 |---|---|---|---|
-| 1 | DocumentDB Global Cluster Switchover | 10 min | — |
-| 2 | Seed Live Flight Data (FlightAware Lambda) | 5 min | 5 min |
-| 3 | **Manual Approval** | 20 min | — |
-| 4 | Parallel: ECS Scale Up + CloudFront Origin Switch | 10 min (ECS), 5 min (CF) | 2 min (CF) |
-| 5 | **Manual Approval** | 20 min | — |
-| 6 | Parallel: FlightAware Child Plan + Scale Down Source ECS | 60 min | 10 min (scale-down) |
+| 1 | DocumentDB Global Cluster Switchover | 10 min | `switchoverOnly` behavior (zero data loss); ungraceful failover option available |
+| 2 | Seed Live Flight Data (FlightAware Lambda) | 5 min | Runs in activating region; 5 min retry interval |
+| 3 | **Manual Approval** | 10 min | Operator confirms DB + data health |
+| 4 | ECS Scale Up (target region) | 10 min | Uses `sampledMaxInLast24Hours` at 100% capacity |
+| 5 | **Manual Approval** | 10 min | Operator confirms application health |
+| 6 | Parallel: FlightAware Child Plan + Scale Down Source ECS | 60 min | Skipped on ungraceful failover |
 
-### Step Names by Direction
+Step 6 runs two actions in parallel:
 
-| Step | Failover (activate us-east-2) | Failback (activate us-east-1) |
+1. **FlightAware Child Plan** (`flightaware-app-switchover`) — a nested ARC plan that enables the EventBridge schedule in the target region and disables it in the source region
+2. **Scale Down Source ECS** — a custom Lambda that sets the source region ECS desired count to 0, returning it to Pilot Light state
+
+
+### Ungraceful Failover
+
+An **ungraceful execution** is an unplanned execution triggered when the source region is unavailable. The ungraceful workflow mode uses only the necessary steps and actions — it either changes the behavior of execution blocks or skips them entirely. The plan handles this automatically with degraded behavior:
+
+| Step | Normal (Graceful) | Ungraceful |
 |---|---|---|
-| 3 | `FailoverApproval` | `FailbackApproval` |
-| 5 | `FinalApproval` | `FinalApprovalFailback` |
+| 1 — DocumentDB | `switchoverOnly` — zero data loss, both clusters must be healthy | `failover` — forced promotion of secondary to writer. **Potential data loss** equal to replication lag at time of failure |
+| 6 — Scale Down Source ECS | Scales source ECS to 0 | **Skipped** — source region is unreachable |
+| 6 — FlightAware Child Plan | Disables schedule in source, enables in target | **Skipped** — source region is unreachable |
+
+> [!WARNING]
+> After an ungraceful failover, once the source region recovers you must manually:
+> 1. Scale down ECS in the former primary region (set desired count to 0)
+> 2. Disable the EventBridge scheduled refresh in the former primary region
+> 3. Remove the old DocumentDB cluster from the global cluster and re-add it as a secondary
+
 ---
 
 ## Approving Manual Gates
 
-Steps 3 and 5 pause execution and wait for an authorized operator to approve. Approval is done through the AWS Console.
+Steps 3 and 5 pause execution and wait for an authorized operator to approve.
+
+### Who Can Approve
+
+The operator must be signed in with the IAM role specified as `ApprovalRoleArn` during deployment.
+
+> [!WARNING]
+> For SSO roles, the **full IAM path** is required. Using a short ARN causes `AccessDeniedException`.
+
+```bash
+# Get your role's full ARN (including IAM path)
+aws sts get-caller-identity
+# → arn:aws:sts::ACCOUNT:assumed-role/ROLE_NAME/session
+
+aws iam get-role --role-name ROLE_NAME --query 'Role.Arn'
+# → arn:aws:iam::ACCOUNT:role/aws-reserved/sso.amazonaws.com/ROLE_NAME
+```
 
 ### Console Walkthrough
 
@@ -82,51 +96,45 @@ Steps 3 and 5 pause execution and wait for an authorized operator to approve. Ap
 
 ### What to Verify Before Step 3 Approval
 
-- [ ] DocumentDB switchover completed — check DocumentDB console in target region shows cluster role as **Writer**
+- [ ] DocumentDB switchover completed — DocumentDB console in target region shows cluster role as **Writer**
 - [ ] Flight data seed Lambda (Step 2) shows **Succeeded** in the execution timeline
 - [ ] Secrets Manager replica shows status **InSync** in the target region
 
 ### What to Verify Before Step 5 Approval
 
 - [ ] ECS service in target region shows desired task count running (ECS console > Clusters > `airporthub-cluster` > Service)
-- [ ] CloudFront origin updated — CloudFront console > Distribution > Origins tab shows target region ALB
-- [ ] Health check passes — `https://<cloudfront-domain>/api/health` returns `{"status": "healthy"}`
-
-### What Happens If You Decline
-
-Declining an approval gate **stops the execution immediately**. The system does NOT roll back — whatever steps completed before the gate remain in effect. For example:
-
-- If you decline at Step 3: DocumentDB has already switched over but compute is still in the old region. You would need to start a new execution targeting the original region to reverse Step 1.
-- If you decline at Step 5: ECS is scaled up and CloudFront is switched, but cleanup (Step 6) won't run. You'd need to manually scale down the source ECS or start a new failback execution.
-
-### Timeout Behavior
-
-If an approval gate is not approved or declined within **20 minutes**, the execution fails. You can investigate and start a new execution from the plan page.
-
-### Who Can Approve
-
-The operator must be signed in with the IAM role specified as `ApprovalRoleArn` during deployment. For SSO roles, the full IAM path is required:
-
-```bash
-# Get your role's full ARN (including IAM path)
-aws sts get-caller-identity
-# → arn:aws:sts::ACCOUNT:assumed-role/ROLE_NAME/session
-
-aws iam get-role --role-name ROLE_NAME --query 'Role.Arn'
-# → arn:aws:iam::ACCOUNT:role/aws-reserved/sso.amazonaws.com/ROLE_NAME
-```
-
-Using a short ARN (without the `/aws-reserved/sso.amazonaws.com/` path) causes `AccessDeniedException`.
+- [ ] ALB health check passing — target group shows healthy targets
+- [ ] Application responds — `https://<cloudfront-domain>/api/health` returns `{"status": "healthy"}`
 
 ---
 
-## How CloudFront Origin Switch Works
+## How CloudFront Failover Works
 
-The CloudFront switch Lambda (Step 4) updates the distribution's single origin in-place by swapping both the **VPC Origin ID** and the **ALB domain name** to point to the target region. Both regions have a pre-created VPC Origin (named `airporthub-vpc-origin-<region>`) pointing to their internal ALB. The Lambda looks up the target ALB DNS, resolves the target VPC Origin ID by name, then calls `UpdateDistribution` to apply both changes.
+CloudFront failover operates at the **data plane** via an origin group — there is no ARC step or Lambda that switches the CloudFront origin during failover.
 
-[![CloudFront Origin Switch Flow](generated-diagrams/CFSwitch.png)](generated-diagrams/CFSwitch.png)
+### Origin Group Configuration
 
-This is instant (no DNS TTL) because CloudFront VPC Origins route over AWS's internal backbone — the ALBs are never exposed to the public internet.
+| Component | Value |
+|---|---|
+| Primary origin | `alb-primary` — VPC Origin to internal ALB in us-east-1 |
+| Secondary origin | `alb-secondary` — VPC Origin to internal ALB in us-east-2 |
+| Origin group | `alb-origin-group` — failover on HTTP 500, 502, 503, 504 |
+| Default behavior | GET/HEAD/OPTIONS → origin group |
+
+When CloudFront receives a GET/HEAD/OPTIONS request, it routes to the primary origin. If the primary returns 500/502/503/504, CloudFront **automatically retries** the same request against the secondary origin — no control-plane API call needed, no DNS TTL delay.
+
+### Write Operations (POST/PUT/DELETE)
+
+> [!IMPORTANT]
+> **Origin group failover only covers GET/HEAD/OPTIONS.** Write operations route directly to the primary origin and are unavailable during failover to us-east-2. This is an [AWS-documented limitation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/RequestAndResponseBehaviorOriginGroups.html) — CloudFront does not fail over when the viewer sends POST, PUT, or DELETE.
+
+Write paths are configured as 6 separate cache behaviors that all point directly to `alb-primary`:
+
+- `/api/flights`, `/api/flights/*`
+- `/api/airports`, `/api/airports/*`
+- `/api/crew`, `/api/crew/*`
+
+This is a documented tradeoff — the dashboard is read-heavy, so the origin group covers the critical read path. Writes are unavailable during failover and resume only after failback to us-east-1 (the region `alb-primary` points to).
 
 ---
 
@@ -134,21 +142,30 @@ This is instant (no DNS TTL) because CloudFront VPC Origins route over AWS's int
 
 Every plan execution generates a report with step-by-step timing, success/failure status, and error details. Use these for post-incident review and RTO measurement.
 
-**To view execution history in the console:**
+### Viewing in the Console
 
-1. Open **Application Recovery Controller** > **Region switch** in the [AWS Console](https://console.aws.amazon.com)
+1. Open **Application Recovery Controller** > **Region switch**
 2. Select the `airporthub-region-switch` plan
-3. Choose the **Plan execution history** tab to see all past executions
+3. Choose the **Plan execution history** tab
 4. Click an **Execution ID** to view step-by-step progress and results
 
-Reports are also automatically delivered to S3 at `s3://airporthub-arc-reports-<ACCOUNT_ID>/` for programmatic access, compliance evidence, or long-term retention.
+### S3 Reports
+
+Reports are automatically delivered to:
+
+```
+s3://airporthub-arc-reports-<ACCOUNT_ID>/
+```
+
+Use these for programmatic access, compliance evidence, or long-term retention.
 
 ---
 
-## Call for action
+## References
 
 - [Execute a Region Switch Plan](https://docs.aws.amazon.com/r53recovery/latest/dg/plan-execution-rs.html)
 - [AWS::ARCRegionSwitch::Plan CloudFormation Reference](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/AWS_ARCRegionSwitch.html)
 - [ARC Region Switch Plan Trust Policy](https://docs.aws.amazon.com/r53recovery/latest/dg/security_iam_region_switch_trust_policy.html)
 - [DocumentDB Global Cluster DR](https://docs.aws.amazon.com/documentdb/latest/developerguide/global-clusters-disaster-recovery.html)
 - [ARC Region Switch Pricing](https://aws.amazon.com/application-recovery-controller/pricing/)
+- [Well-Architected Reliability Pillar — Avoid Control Plane Dependencies](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_withstand_component_failures_avoid_control_plane.html)

@@ -131,7 +131,7 @@ def handler(event: dict, context) -> None:
     request_type = event["RequestType"]
 
     try:
-        if request_type == "Create":
+        if request_type in ("Create", "Update"):
             props = event["ResourceProperties"]
             endpoint = props["DocDbEndpoint"]
             secret_arn = props["DocDbSecretArn"]
@@ -151,9 +151,9 @@ def handler(event: dict, context) -> None:
                 "CrewSeeded": str(crew_count),
             })
 
-        elif request_type in ("Update", "Delete"):
-            # No-op — data persists across updates, cleanup on delete handled by teardown
-            logger.info(f"{request_type} — no-op")
+        elif request_type == "Delete":
+            # No-op — data persists, cleanup handled by teardown
+            logger.info("Delete — no-op")
             send_cfn_response(event, context, "SUCCESS")
 
     except Exception as err:

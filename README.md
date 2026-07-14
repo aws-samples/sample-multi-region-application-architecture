@@ -33,8 +33,8 @@ Traditional disaster recovery relies on manual runbooks — ad-hoc steps that ar
 This is a hands-on reference for teams who want to understand:
 
 - What Pilot Light DR looks like in practice across a real multi-service application
-- How AWS ARC Region Switch orchestrates failover across multiple microservices and third-party dependencies.
-- How to keep secondary region compute costs near zero while still achieving a 15-minute RTO
+- How [AWS ARC Region Switch](https://docs.aws.amazon.com/r53recovery/latest/dg/what-is-route53-recovery.html) orchestrates failover across multiple microservices and third-party dependencies.
+- How to keep secondary region compute costs near zero while still achieving a low RTO
 
 ---
 
@@ -46,16 +46,16 @@ AirportHub is a sample multi-region Airport Operations Dashboard that serves as 
 
 - **Flight Board** — live flight data via [FlightAware AeroAPI](https://www.flightaware.com/aeroapi/) (paid, optional)
 - **Crew Operations** — crew assignment management (mock data)
-- **Airport Directory** — airport information (static data)
+- **Airport Directory** — airport information (static data, but you have the ability to add more airports)
 - **Auth** — Amazon Cognito-backed login
 
 ### Stack
 
 - **Frontend**: React (Vite), deployed via ECS Fargate + CloudFront
-- **API Layer**: 3 AWS Lambda functions (airports, flights, crew) behind an ALB
+- **API Layer**: 3 [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html) functions (airports, flights, crew) behind an ALB
 - **Database**: Amazon DocumentDB (MongoDB-compatible)
 - **Auth**: Amazon Cognito User Pool
-- **Scheduled Refresh**: EventBridge-triggered Lambda for hourly flight data refresh
+- **FlightAware Scheduled Refresh**: EventBridge-triggered Lambda for hourly flight data refresh
 
 ### FlightAware Integration
 
@@ -95,7 +95,8 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 ```
 .
 ├── airporthub-master.yaml          # CloudFormation parent stack (orchestrates all nested stacks)
-├── deploy.py                       # Interactive deploy/teardown script
+├── deploy.py                       # Interactive deploy script
+├── teardown.py                     # Standalone teardown script (handles failures, retries)
 ├── infrastructure/                 # CloudFormation nested stack templates
 │   ├── network.yaml                #   VPC, subnets, NAT, security groups, VPC endpoints
 │   ├── auth.yaml                   #   Cognito User Pool + App Client
@@ -164,7 +165,35 @@ The database is the centerpiece of the DR strategy. Key properties:
 
 ### CloudFront as the Traffic Switch
 
-CloudFront sits in front of both ALBs via **VPC Origins** — a private connectivity path that routes traffic over AWS's internal backbone without exposing the ALBs to the public internet. Both ALBs are internal (no public IP) and only reachable through CloudFront's managed network interfaces. Failover is a single Lambda call that updates the active origin — no DNS TTL wait, no Route 53 record change. This is the fastest part of the failover sequence.
+CloudFront sits in front of both Application Load Balancers through [**VPC Origins**](https://aws.amazon.com/blogs/networking-and-content-delivery/introducing-cloudfront-virtual-private-cloud-vpc-origins-shield-your-web-applications-from-public-internet/) — a private connectivity path that routes traffic over AWS's internal backbone, keeping the ALBs off the public internet. An origin group wraps both VPC Origins (us-east-1 as primary, us-east-2 as secondary) and automatically retries on 500, 502, 503, and 504 errors — no control-plane API call required to trigger failover. This approach aligns with the [Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_withstand_component_failures_avoid_control_plane.html) of the AWS Well-Architected Framework.
+
+> [!IMPORTANT]
+> Origin group failover applies only to GET, HEAD, and OPTIONS requests. Write operations (e.g., `/api/*` paths) route directly to the primary origin and become unavailable if us-east-2 is serving traffic during a failover event. This is an [AWS-documented constraint](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/RequestAndResponseBehaviorOriginGroups.html) — CloudFront does not fail over requests that use POST, PUT, or DELETE methods. See [How CloudFront Failover Works](docs/Region-Switch-Failover.md#how-cloudfront-failover-works) for details.
+
+#### CloudFront Origin Group vs Route 53 DNS Failover
+
+This project uses CloudFront origin group failover for read traffic. The table below compares it with Route 53 DNS failover — an alternative pattern that supports all HTTP methods.
+
+| Dimension | CloudFront Origin Group | Route 53 DNS Failover |
+|---|---|---|
+| **Failover trigger** | Per-request (data plane) | Health check threshold (data plane) |
+| **Failover speed** | Instant — retries on same request | ~70 seconds minimum (polling + DNS TTL) |
+| **HTTP methods** | GET/HEAD/OPTIONS only | All methods including POST/PUT/DELETE |
+| **Statefulness** | Stateless — each request fails independently | Stateful — all traffic switches once unhealthy |
+| **Latency on failure** | Added per failed request (tries primary first) | None once DNS resolves to secondary |
+| **Control plane dependency** | None | None |
+| **Write failover** | ❌ Not supported | ✅ Supported |
+
+**Why this project uses origin group:** The dashboard is read-heavy. Origin group provides instant, zero-configuration failover for reads with no DNS TTL delay and no control plane dependency. Write operations are unavailable during failover — a documented tradeoff acceptable for this use case.
+
+> [!NOTE]
+> These two patterns can be combined (hybrid approach) to get instant read failover via origin group and stateful write failover via Route 53. See the AWS blogs below for implementation details.
+
+**Further reading:**
+
+- [Three advanced design patterns for high available applications using Amazon CloudFront](https://aws.amazon.com/blogs/networking-and-content-delivery/three-advanced-design-patterns-for-high-available-applications-using-amazon-cloudfront/) — Covers origin group, Route 53 DNS failover, and the hybrid pattern combining both
+- [Improve web application availability with CloudFront and Route53 hybrid origin failover](https://aws.amazon.com/blogs/networking-and-content-delivery/improve-web-application-availability-with-cloudfront-and-route53-hybrid-origin-failover/) — Step-by-step hybrid implementation
+- [Creating Disaster Recovery Mechanisms Using Amazon Route 53](https://aws.amazon.com/blogs/networking-and-content-delivery/creating-disaster-recovery-mechanisms-using-amazon-route-53/) — Route 53 health check mechanics and ARC integration
 
 ### ARC Region Switch — Replacing the Runbook
 
@@ -182,29 +211,25 @@ Rather than a wiki page of manual steps, the entire failover sequence is codifie
 
 The plan is manually triggered by an authorized operator — there are no automatic triggers. Both failover and failback use the same 6-step structure.
 
-### Failover: Activate us-east-2
+### Failover: Activate us-east-2 (secondary region)
 
 ```
-Step 1 — DocumentDB Global Cluster Switchover
+Step 1 — DocumentDB Global Cluster Switchover (10 min timeout)
          ├── Promote us-east-2 secondary → primary writer
-         ├── Behavior: switchoverOnly (zero data loss; requires both clusters healthy)
-         └── Timeout: 10 minutes
+         └── Behavior: switchoverOnly (zero data loss; requires both clusters healthy)
 
-Step 2 — Seed Live Flight Data
+Step 2 — Seed Live Flight Data (5 min timeout)
          ├── Invoke Flights Lambda in the activating region
          ├── Fetches live data from FlightAware AeroAPI
          └── Writes to the newly promoted DocumentDB primary
 
-Step 3 — 🔐 Manual Approval: FailoverApproval
+Step 3 — 🔐 Manual Approval: FailoverApproval (10 min timeout)
          └── Operator confirms DB switchover + live data before activating compute
 
-Step 4 — Parallel Execution
-         ├── ECS Scale Up (us-east-2: 0 → production capacity)
-         │   └── Uses sampledMaxInLast24Hours for target task count
-         └── CloudFront Origin Switch
-             └── Custom Lambda updates CloudFront to route traffic → alb-us-east-2
+Step 4 — ECS Scale Up (us-east-2: 0 → production capacity, 10 min timeout)
+         └── Uses sampledMaxInLast24Hours for target task count
 
-Step 5 — 🔐 Manual Approval: FinalApproval
+Step 5 — 🔐 Manual Approval: FinalApproval (10 min timeout)
          └── Operator confirms application is healthy in us-east-2
 
 Step 6 — Post-Failover Cleanup (Parallel)
@@ -216,7 +241,7 @@ Step 6 — Post-Failover Cleanup (Parallel)
 
 ### Failback: Activate us-east-1
 
-Identical 6-step structure in reverse — promotes us-east-1 back to primary, switches CloudFront origin, toggles the FlightAware schedule, and scales down us-east-2.
+Identical 6-step structure in reverse — promotes us-east-1 back to primary, toggles the FlightAware schedule, and scales down us-east-2.
 
 ### FlightAware Child Plan
 
@@ -292,8 +317,20 @@ The deploy script handles everything in order:
 > **Tear down promptly when not in use.** This demo deploys resources across two regions that incur ongoing costs. The primary ongoing cost is the **DocumentDB Global Cluster** running in both regions.
 
 ```bash
-python3 deploy.py --teardown
+# Recommended: standalone teardown script (handles VPC endpoints, ECR images, retry logic)
+python3 teardown.py --profile my-profile
+
+# Preview what would be deleted without taking action
+python3 teardown.py --profile my-profile --dry-run
+
+# Skip confirmation prompt
+python3 teardown.py --profile my-profile --yes
+
+# Legacy (delegates to teardown.py)
+python3 deploy.py --teardown --profile my-profile
 ```
+
+The teardown script auto-discovers all AirportHub resources by prefix, handles common deletion blockers (VPC endpoint ENIs, ECR images, DocumentDB global cluster ordering), and retries on failure.
 
 ---
 

@@ -1,6 +1,7 @@
 # AirportHub ARC Region Switch Plan
 # Orchestrates pilot light failover between us-east-1 and us-east-2
-# Steps: DocumentDB switchover → seed flight data → approval → scale ECS + switch CloudFront → approval → nested FlightAware plan + scale down source
+# Steps: DocumentDB switchover → seed flight data → approval → scale ECS → approval → nested FlightAware plan + scale down source
+# CloudFront failover handled by origin group (data plane) - no control plane call needed
 
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
@@ -34,20 +35,6 @@ Parameters:
   SecondaryEcsServiceArn:
     Type: String
 
-  # ALB
-  PrimaryAlbArn:
-    Type: String
-  PrimaryAlbDnsName:
-    Type: String
-  SecondaryAlbArn:
-    Type: String
-  SecondaryAlbDnsName:
-    Type: String
-
-  # CloudFront
-  CloudFrontDistributionId:
-    Type: String
-
   # DocumentDB
   DocDbGlobalClusterIdentifier:
     Type: String
@@ -73,10 +60,6 @@ Parameters:
     Description: IAM role ARN authorized to approve manual plan steps
 
   # Helper Lambda ARNs (deployed per-region by compute stack)
-  PrimaryCfSwitchFunctionArn:
-    Type: String
-  SecondaryCfSwitchFunctionArn:
-    Type: String
   PrimaryEcsScaleDownFunctionArn:
     Type: String
   SecondaryEcsScaleDownFunctionArn:
@@ -129,15 +112,6 @@ Resources:
                   - lambda:InvokeFunction
                   - lambda:GetFunction
                 Resource: '*'
-        - PolicyName: CloudFrontUpdate
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - cloudfront:GetDistributionConfig
-                  - cloudfront:UpdateDistribution
-                Resource: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistributionId}'
         - PolicyName: ArcPermissions
           PolicyDocument:
             Version: '2012-10-17'
@@ -214,8 +188,8 @@ Resources:
       Name: !Sub '${StackPrefix}-region-switch'
       Description: >
         AirportHub pilot light failover. Orchestrates DocumentDB global cluster
-        failover, ECS service scaling, CloudFront origin switch, and FlightAware
-        scheduled refresh toggle.
+        failover, ECS service scaling, and FlightAware scheduled refresh toggle.
+        CloudFront failover handled by origin group (data plane, no ARC step needed).
       PrimaryRegion: !Ref PrimaryRegion
       RecoveryApproach: activePassive
       Regions:
@@ -253,6 +227,8 @@ Resources:
                     - !Sub 'arn:aws:rds:${PrimaryRegion}:${AWS::AccountId}:cluster:${PrimaryDocDbClusterIdentifier}'
                     - !Sub 'arn:aws:rds:${SecondaryRegion}:${AWS::AccountId}:cluster:${SecondaryDocDbClusterIdentifier}'
                   Behavior: switchoverOnly
+                  Ungraceful:
+                    Ungraceful: failover
                   TimeoutMinutes: 10
 
             # Step 2: Seed live flight data into activating region
@@ -275,41 +251,22 @@ Resources:
               ExecutionBlockConfiguration:
                 ExecutionApprovalConfig:
                   ApprovalRole: !Ref ApprovalRoleArn
-                  TimeoutMinutes: 20
+                  TimeoutMinutes: 10
 
-            # Step 4: Scale ECS + switch CloudFront in parallel
-            - Name: scale-and-switch
-              Description: Scale ECS to production and switch CloudFront origin (parallel)
-              ExecutionBlockType: Parallel
+            # Step 4: Scale ECS in recovery region
+            - Name: scale-up-ecs
+              Description: Scale ECS from 0 to production capacity
+              ExecutionBlockType: ECSServiceScaling
               ExecutionBlockConfiguration:
-                ParallelConfig:
-                  Steps:
-
-                    - Name: scale-up-ecs
-                      Description: Scale ECS from 0 to production capacity
-                      ExecutionBlockType: ECSServiceScaling
-                      ExecutionBlockConfiguration:
-                        EcsCapacityIncreaseConfig:
-                          Services:
-                            - ClusterArn: !Ref PrimaryEcsClusterArn
-                              ServiceArn: !Ref PrimaryEcsServiceArn
-                            - ClusterArn: !Ref SecondaryEcsClusterArn
-                              ServiceArn: !Ref SecondaryEcsServiceArn
-                          TargetPercent: 100
-                          CapacityMonitoringApproach: sampledMaxInLast24Hours
-                          TimeoutMinutes: 10
-
-                    - Name: switch-cloudfront-origin
-                      Description: Switch CloudFront origin to activating region ALB
-                      ExecutionBlockType: CustomActionLambda
-                      ExecutionBlockConfiguration:
-                        CustomActionLambdaConfig:
-                          Lambdas:
-                            - Arn: !Ref PrimaryCfSwitchFunctionArn
-                            - Arn: !Ref SecondaryCfSwitchFunctionArn
-                          RegionToRun: activatingRegion
-                          RetryIntervalMinutes: 2
-                          TimeoutMinutes: 5
+                EcsCapacityIncreaseConfig:
+                  Services:
+                    - ClusterArn: !Ref PrimaryEcsClusterArn
+                      ServiceArn: !Ref PrimaryEcsServiceArn
+                    - ClusterArn: !Ref SecondaryEcsClusterArn
+                      ServiceArn: !Ref SecondaryEcsServiceArn
+                  TargetPercent: 100
+                  CapacityMonitoringApproach: sampledMaxInLast24Hours
+                  TimeoutMinutes: 10
 
             # Step 5: Final approval before cleanup
             - Name: FinalApproval
@@ -318,11 +275,11 @@ Resources:
               ExecutionBlockConfiguration:
                 ExecutionApprovalConfig:
                   ApprovalRole: !Ref ApprovalRoleArn
-                  TimeoutMinutes: 20
+                  TimeoutMinutes: 10
 
-            # Step 6: Post-failover - toggle FlightAware + scale down source (parallel)
+            # Step 6: Post-failover - toggle FlightAware and scale down source
             - Name: post-failover-tasks
-              Description: Scale down source ECS and failover scheduled refresh in parallel
+              Description: Toggle scheduled refresh and scale down source ECS in parallel
               ExecutionBlockType: Parallel
               ExecutionBlockConfiguration:
                 ParallelConfig:
@@ -336,7 +293,7 @@ Resources:
                           Arn: !Ref FlightAwareChildPlanArn
 
                     - Name: scaledown-source-ecs
-                      Description: Scale ECS in source region to 0 tasks
+                      Description: Scale ECS in source region to 0 tasks (return to pilot light)
                       ExecutionBlockType: CustomActionLambda
                       ExecutionBlockConfiguration:
                         CustomActionLambdaConfig:
@@ -346,6 +303,8 @@ Resources:
                           RegionToRun: activatingRegion
                           RetryIntervalMinutes: 10
                           TimeoutMinutes: 60
+                          Ungraceful:
+                            Behavior: skip
 
         # ======================================================
         # WORKFLOW 2: Activate us-east-1 (failback)
@@ -366,6 +325,8 @@ Resources:
                     - !Sub 'arn:aws:rds:${PrimaryRegion}:${AWS::AccountId}:cluster:${PrimaryDocDbClusterIdentifier}'
                     - !Sub 'arn:aws:rds:${SecondaryRegion}:${AWS::AccountId}:cluster:${SecondaryDocDbClusterIdentifier}'
                   Behavior: switchoverOnly
+                  Ungraceful:
+                    Ungraceful: failover
                   TimeoutMinutes: 10
 
             - Name: seed-flightaware-data-failback
@@ -386,40 +347,22 @@ Resources:
               ExecutionBlockConfiguration:
                 ExecutionApprovalConfig:
                   ApprovalRole: !Ref ApprovalRoleArn
-                  TimeoutMinutes: 20
+                  TimeoutMinutes: 10
 
-            - Name: scale-and-switch-failback
-              Description: Scale ECS and switch CloudFront back to primary (parallel)
-              ExecutionBlockType: Parallel
+            # Step 4: Scale ECS in recovery region
+            - Name: scale-up-ecs-failback
+              Description: Scale ECS primary back to production capacity
+              ExecutionBlockType: ECSServiceScaling
               ExecutionBlockConfiguration:
-                ParallelConfig:
-                  Steps:
-
-                    - Name: scale-up-ecs-failback
-                      Description: Scale ECS primary back to production capacity
-                      ExecutionBlockType: ECSServiceScaling
-                      ExecutionBlockConfiguration:
-                        EcsCapacityIncreaseConfig:
-                          Services:
-                            - ClusterArn: !Ref PrimaryEcsClusterArn
-                              ServiceArn: !Ref PrimaryEcsServiceArn
-                            - ClusterArn: !Ref SecondaryEcsClusterArn
-                              ServiceArn: !Ref SecondaryEcsServiceArn
-                          TargetPercent: 100
-                          CapacityMonitoringApproach: sampledMaxInLast24Hours
-                          TimeoutMinutes: 10
-
-                    - Name: switch-cloudfront-origin-failback
-                      Description: Switch CloudFront origin back to primary ALB
-                      ExecutionBlockType: CustomActionLambda
-                      ExecutionBlockConfiguration:
-                        CustomActionLambdaConfig:
-                          Lambdas:
-                            - Arn: !Ref PrimaryCfSwitchFunctionArn
-                            - Arn: !Ref SecondaryCfSwitchFunctionArn
-                          RegionToRun: activatingRegion
-                          RetryIntervalMinutes: 2
-                          TimeoutMinutes: 5
+                EcsCapacityIncreaseConfig:
+                  Services:
+                    - ClusterArn: !Ref PrimaryEcsClusterArn
+                      ServiceArn: !Ref PrimaryEcsServiceArn
+                    - ClusterArn: !Ref SecondaryEcsClusterArn
+                      ServiceArn: !Ref SecondaryEcsServiceArn
+                  TargetPercent: 100
+                  CapacityMonitoringApproach: sampledMaxInLast24Hours
+                  TimeoutMinutes: 10
 
             - Name: FinalApprovalFailback
               Description: Operator confirms application is healthy before cleanup
@@ -427,10 +370,11 @@ Resources:
               ExecutionBlockConfiguration:
                 ExecutionApprovalConfig:
                   ApprovalRole: !Ref ApprovalRoleArn
-                  TimeoutMinutes: 20
+                  TimeoutMinutes: 10
 
+            # Step 6: Post-failback - toggle FlightAware and scale down source
             - Name: post-failback-tasks
-              Description: Scale down secondary ECS and toggle FlightAware back (parallel)
+              Description: Toggle scheduled refresh and scale down source ECS in parallel
               ExecutionBlockType: Parallel
               ExecutionBlockConfiguration:
                 ParallelConfig:
@@ -444,7 +388,7 @@ Resources:
                           Arn: !Ref FlightAwareChildPlanArn
 
                     - Name: scaledown-source-ecs-failback
-                      Description: Scale ECS in secondary to 0 tasks
+                      Description: Scale ECS in source region to 0 tasks (return to pilot light)
                       ExecutionBlockType: CustomActionLambda
                       ExecutionBlockConfiguration:
                         CustomActionLambdaConfig:
@@ -454,6 +398,8 @@ Resources:
                           RegionToRun: activatingRegion
                           RetryIntervalMinutes: 10
                           TimeoutMinutes: 60
+                          Ungraceful:
+                            Behavior: skip
 
       Tags:
         Project: AirportHub

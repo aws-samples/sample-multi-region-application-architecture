@@ -640,7 +640,7 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   # ─── Flights Endpoints (Lambda) ──────────────────────────────────────
-  /flights:
+  /api/flights:
     get:
       tags: [Flights]
       summary: List flights
@@ -706,7 +706,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /flights/stats:
+  /api/flights/stats:
     get:
       tags: [Flights]
       summary: Get flight statistics
@@ -755,7 +755,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /flights/seed:
+  /api/flights/seed:
     post:
       tags: [Flights]
       summary: Seed mock flight data
@@ -802,7 +802,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /flights/refresh:
+  /api/flights/refresh:
     post:
       tags: [Flights]
       summary: Refresh live flight data from FlightAware
@@ -857,7 +857,7 @@ paths:
               example:
                 error: "DocDB unavailable after 3 attempts: connection timeout"
 
-  /health:
+  /api/flights/health:
     get:
       tags: [Flights]
       summary: Flights service health check
@@ -891,7 +891,7 @@ paths:
                     format: date-time
 
   # ─── Crew Endpoints (Lambda) ─────────────────────────────────────────
-  /crew/pilots:
+  /api/crew/pilots:
     get:
       tags: [Crew]
       summary: List pilots
@@ -971,7 +971,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /crew/pilots/{employee_id}:
+  /api/crew/pilots/{employee_id}:
     get:
       tags: [Crew]
       summary: Get a pilot
@@ -1076,7 +1076,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /crew/flight-attendants:
+  /api/crew/flight-attendants:
     get:
       tags: [Crew]
       summary: List flight attendants
@@ -1151,7 +1151,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /crew/flight-attendants/{employee_id}:
+  /api/crew/flight-attendants/{employee_id}:
     get:
       tags: [Crew]
       summary: Get a flight attendant
@@ -1254,7 +1254,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /crew/aircraft:
+  /api/crew/aircraft:
     get:
       tags: [Crew]
       summary: List aircraft types
@@ -1325,7 +1325,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /crew/aircraft/{aircraft_type}:
+  /api/crew/aircraft/{aircraft_type}:
     get:
       tags: [Crew]
       summary: Get an aircraft type
@@ -1428,7 +1428,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /crew/assignments:
+  /api/crew/assignments:
     get:
       tags: [Crew]
       summary: List crew assignments
@@ -1504,7 +1504,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /crew/assignments/{id}:
+  /api/crew/assignments/{id}:
     get:
       tags: [Crew]
       summary: Get a crew assignment
@@ -1608,7 +1608,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /crew/health:
+  /api/crew/health:
     get:
       tags: [Crew]
       summary: Crew service health check
