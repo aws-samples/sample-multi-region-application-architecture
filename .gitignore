@@ -93,29 +93,3 @@ packaged-*.yaml
 # generated-diagrams/
 package/
 
-# AI-DLC workflow files
-aidlc-docs/
-.aidlc/
-.kiro/
-.aidlc-rule-details/
-flights-service/flightaware_client.py
-airport-service/global-bundle.pem
-crew-service/global-bundle.pem
-flights-service/global-bundle.pem
-hejani_aidlc/
-
-# Unit tests (local development only)
-tests/
-
-# Security fix documentation
-fix-command-injection.md
-
-# Findings and bug tracker (local working docs)
-CONTROL-PLANE-FINDINGS.md
-bugs.md
-
-# Security scan exports
-ProbeScanExport-*.csv
-
-# Utility scripts (local development only)
-monitor-region.sh
