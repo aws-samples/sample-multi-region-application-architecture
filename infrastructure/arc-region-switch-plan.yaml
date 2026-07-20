@@ -170,6 +170,8 @@ Resources:
       BucketName: !Sub '${StackPrefix}-arc-reports-${AWS::AccountId}'
       # Note: No explicit BucketEncryption — S3 defaults to SSE-S3 (AES256) since Jan 2023.
       # Explicit PutEncryptionConfiguration is blocked by some org SCPs.
+      VersioningConfiguration:
+        Status: Enabled
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true

@@ -375,6 +375,9 @@ Resources:
       TaskDefinition: !Ref TaskDefinition
       # Always start at 0 - deploy.py calls force_ecs_deployment after CodeBuild pushes the image
       DesiredCount: 0
+      # Grace period: ALB health checks won't mark targets unhealthy during startup.
+      # Flask app + ADOT init container take ~60-90s to become healthy.
+      HealthCheckGracePeriodSeconds: 120
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
