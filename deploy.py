@@ -957,6 +957,9 @@ def _run_full_deploy(config: dict) -> None:
     step_done("Application source staged for CodeBuild")
 
     container_image = f"{config['account_id']}.dkr.ecr.{config['primary_region']}.amazonaws.com/{config['stack_prefix']}-app:latest"
+    # Secondary region must pull from its own ECR repo (replicated via ECR replication rule).
+    # Using the primary URI would fail during failover if us-east-1 is impaired.
+    secondary_container_image = f"{config['account_id']}.dkr.ecr.{config['secondary_region']}.amazonaws.com/{config['stack_prefix']}-app:latest"
     deploy_master_stack(
         config, config["primary_region"], packaged,
         SourceBucket=source_bucket, SourceKey=source_key, ContainerImageUri=container_image,
@@ -983,7 +986,7 @@ def _run_full_deploy(config: dict) -> None:
                 CognitoUserPoolArn=primary_outputs.get("CognitoUserPoolArn", ""),
                 CognitoAppClientId=primary_outputs.get("CognitoAppClientId", ""),
                 GlobalClusterIdentifier=primary_outputs.get("GlobalClusterIdentifier", ""),
-                ContainerImageUri=container_image,
+                ContainerImageUri=secondary_container_image,
             )
 
         future_build = executor.submit(_codebuild_and_ecs)
@@ -1181,6 +1184,9 @@ def main() -> None:
 
                 # Step 4: Deploy primary master stack
                 container_image = f"{config['account_id']}.dkr.ecr.{config['primary_region']}.amazonaws.com/{config['stack_prefix']}-app:latest"
+                # Secondary region must pull from its own ECR repo (replicated via ECR replication rule).
+                # Using the primary URI would fail during failover if us-east-1 is impaired.
+                secondary_container_image = f"{config['account_id']}.dkr.ecr.{config['secondary_region']}.amazonaws.com/{config['stack_prefix']}-app:latest"
                 progress.update(task, description="[4/8] Deploying primary stack (us-east-1)")
                 deploy_master_stack(
                     config, config["primary_region"], packaged,
@@ -1216,7 +1222,7 @@ def main() -> None:
                         CognitoUserPoolArn=primary_outputs.get("CognitoUserPoolArn", ""),
                         CognitoAppClientId=primary_outputs.get("CognitoAppClientId", ""),
                         GlobalClusterIdentifier=primary_outputs.get("GlobalClusterIdentifier", ""),
-                        ContainerImageUri=container_image,
+                        ContainerImageUri=secondary_container_image,
                     )
 
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
