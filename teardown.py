@@ -13,11 +13,14 @@ Usage:
 """
 
 import argparse
+import concurrent.futures
 import json
 import logging
 import subprocess
 import sys
 import time
+
+import boto3
 
 # ── Logging setup ──────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -89,7 +92,6 @@ def get_boto3_client(service: str, region: str, profile: str):
     Uses boto3.Session to respect the --profile argument, similar to how
     the AWS CLI uses named profiles from ~/.aws/credentials.
     """
-    import boto3
     session = boto3.Session(profile_name=profile, region_name=region)
     return session.client(service)
 
@@ -189,36 +191,48 @@ def discover_resources(profile: str) -> dict:
     return resources
 
 
-def print_discovery(resources: dict) -> None:
-    """Print discovered resources in a readable format."""
+def count_resources(resources: dict) -> int:
+    """Count total discovered resources across all categories."""
     total = 0
+    for region_stacks in resources["stacks"].values():
+        total += len(region_stacks)
+    total += len(resources["s3_buckets"])
+    for region_repos in resources["ecr_repos"].values():
+        total += len(region_repos)
+    total += len(resources["docdb_global_clusters"])
+    return total
 
+
+def print_discovery(resources: dict) -> int:
+    """
+    Print discovered resources in a readable format.
+
+    Returns:
+        Total number of resources found
+    """
     if resources["stacks"]:
         step_info("CloudFormation Stacks:")
         for region, stacks in resources["stacks"].items():
             for s in stacks:
                 print(f"      [{region}] {s['name']} ({s['status']})")
-                total += 1
 
     if resources["s3_buckets"]:
         step_info("S3 Buckets:")
         for b in resources["s3_buckets"]:
             print(f"      {b}")
-            total += 1
 
     if resources["ecr_repos"]:
         step_info("ECR Repositories:")
         for region, repos in resources["ecr_repos"].items():
             for r in repos:
                 print(f"      [{region}] {r}")
-                total += 1
 
     if resources["docdb_global_clusters"]:
         step_info("DocumentDB Global Clusters:")
         for gc in resources["docdb_global_clusters"]:
             print(f"      {gc}")
-            total += 1
 
+    total = count_resources(resources)
     if total == 0:
         step_info("No AirportHub resources found. Account is clean.")
 
@@ -350,23 +364,44 @@ def empty_s3_buckets(profile: str) -> None:
         except Exception:
             bucket_region = "us-east-1"
 
-        # List and delete all objects
+        # Empty and delete the bucket (handles versioned objects)
         client = get_boto3_client("s3", bucket_region, profile)
         try:
-            paginator = client.get_paginator("list_objects_v2")
-            for page in paginator.paginate(Bucket=bucket_name):
-                objects = page.get("Contents", [])
-                if objects:
-                    delete_keys = [{"Key": o["Key"]} for o in objects]
-                    client.delete_objects(
-                        Bucket=bucket_name,
-                        Delete={"Objects": delete_keys}
-                    )
+            _empty_bucket(client, bucket_name)
             # Delete the bucket
             client.delete_bucket(Bucket=bucket_name)
             step_done(f"Deleted S3 bucket: {bucket_name}")
         except Exception as e:
             step_warn(f"Could not delete bucket {bucket_name}: {e}")
+
+
+def _empty_bucket(client, bucket_name: str) -> int:
+    """
+    Delete all objects, versions, and delete markers from an S3 bucket.
+
+    Handles both versioned and unversioned buckets. Uses list_object_versions
+    which returns current objects, old versions, AND delete markers — all of
+    which must be removed before a bucket can be deleted.
+
+    Args:
+        client: boto3 S3 client
+        bucket_name: Name of the bucket to empty
+
+    Returns:
+        Total number of objects/versions/markers deleted
+    """
+    deleted_count = 0
+    paginator = client.get_paginator("list_object_versions")
+    for page in paginator.paginate(Bucket=bucket_name):
+        # Collect both versioned objects and delete markers
+        objects = []
+        for key in ("Versions", "DeleteMarkers"):
+            for obj in page.get(key, []):
+                objects.append({"Key": obj["Key"], "VersionId": obj["VersionId"]})
+        if objects:
+            client.delete_objects(Bucket=bucket_name, Delete={"Objects": objects})
+            deleted_count += len(objects)
+    return deleted_count
 
 
 def _empty_arc_reports_bucket(profile: str) -> None:
@@ -386,17 +421,7 @@ def _empty_arc_reports_bucket(profile: str) -> None:
     bucket_name = f"{STACK_PREFIX}-arc-reports-{account_id}"
     client = get_boto3_client("s3", "us-east-1", profile)
     try:
-        paginator = client.get_paginator("list_objects_v2")
-        deleted_count = 0
-        for page in paginator.paginate(Bucket=bucket_name):
-            objects = page.get("Contents", [])
-            if objects:
-                delete_keys = [{"Key": o["Key"]} for o in objects]
-                client.delete_objects(
-                    Bucket=bucket_name,
-                    Delete={"Objects": delete_keys}
-                )
-                deleted_count += len(delete_keys)
+        deleted_count = _empty_bucket(client, bucket_name)
         if deleted_count > 0:
             step_done(f"Emptied ARC reports bucket: {deleted_count} object(s) removed")
     except client.exceptions.NoSuchBucket:
@@ -665,7 +690,6 @@ def run_teardown(profile: str) -> None:
     4. Orphaned stacks cleanup
     5. S3 buckets
     """
-    import concurrent.futures
 
     print("")
     print("  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -864,14 +888,11 @@ def main():
     print("")
     step_info("Verifying account is clean...")
     remaining = discover_resources(args.profile)
-    remaining_count = sum(
-        len(v) if isinstance(v, list) else sum(len(s) for s in v.values())
-        for v in remaining.values() if v
-    )
+    remaining_count = count_resources(remaining)
     if remaining_count == 0:
-        print("  ✅ All AirportHub resources removed successfully.")
+        print("  All AirportHub resources removed successfully.")
     else:
-        print(f"  ⚠️  {remaining_count} resource(s) still remain. Manual cleanup may be needed.")
+        print(f"  {remaining_count} resource(s) still remain. Manual cleanup may be needed.")
         print_discovery(remaining)
 
     print("")
