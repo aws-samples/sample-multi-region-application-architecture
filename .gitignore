@@ -93,3 +93,9 @@ packaged-*.yaml
 # generated-diagrams/
 package/
 
+
+# Lambda packaging artifacts (copied by deploy.py during bundling)
+airport-service/global-bundle.pem
+crew-service/global-bundle.pem
+flights-service/global-bundle.pem
+flights-service/flightaware_client.py
