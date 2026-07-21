@@ -7,9 +7,9 @@ Addresses common teardown failures: VPC endpoint ENIs blocking subnets, ECR repo
 images, and DocumentDB global cluster ordering.
 
 Usage:
-    python3 teardown.py --profile admin-6278              # Interactive teardown
-    python3 teardown.py --profile admin-6278 --dry-run    # List resources without deleting
-    python3 teardown.py --profile admin-6278 --yes        # Skip confirmation prompt
+    python3 teardown.py --profile my-profile              # Interactive teardown
+    python3 teardown.py --profile my-profile --dry-run    # List resources without deleting
+    python3 teardown.py --profile my-profile --yes        # Skip confirmation prompt
 """
 
 import argparse
@@ -809,7 +809,7 @@ def main():
     )
     parser.add_argument(
         "--profile", required=True,
-        help="AWS CLI profile name (e.g., admin-6278)"
+        help="AWS CLI profile name (e.g., my-profile)"
     )
     parser.add_argument(
         "--dry-run", action="store_true",
