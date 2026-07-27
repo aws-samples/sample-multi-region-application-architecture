@@ -64,6 +64,8 @@ AirportHub is a sample multi-region Airport Operations Dashboard that serves as 
 
 The [FlightAware AeroAPI](https://www.flightaware.com/aeroapi/) key is used for on-demand and scheduled flight data refresh. The deploy script will prompt for the key — press Enter to skip and deploy with the scheduled refresh inactive. For setup details, see [docs/FLIGHTAWARE-API-KEY-GUIDE.md](docs/FLIGHTAWARE-API-KEY-GUIDE.md).
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Architecture Overview
@@ -87,6 +89,8 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 
 > [!NOTE]
 > Cognito is currently deployed in the primary region only and is **not replicated** to us-east-2. AWS now offers [Multi-Region Replication (MRR)](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-multi-region.html) for Cognito User Pools, which creates a replica with shared user directory and Route 53-based automatic failover. In a real-world scenario, you would configure MRR with a Route 53 health check for automatic auth failover.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -125,6 +129,8 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
     ├── Region-Switch-Failover.md   #   Failover operations runbook (ARC Region Switch)
     └── generated-diagrams/         #   Architecture diagram PNGs
 ```
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -211,6 +217,8 @@ Rather than a wiki page of manual steps, the entire failover sequence is codifie
 - **Nested plan support** — a child plan (`flightaware-app-switchover`) manages the scheduled data refresh microservice independently, simulating microservice ownership boundaries
 - **Symmetric failover/failback** — the same plan structure handles both directions
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## ARC Region Switch Walkthrough
@@ -267,6 +275,7 @@ aws iam get-role --role-name ROLE_NAME --query 'Role.Arn'
 # Returns: arn:aws:iam::ACCOUNT:role/aws-reserved/sso.amazonaws.com/ROLE_NAME
 ```
 
+[↑ Back to top](#table-of-contents)
 
 ## Resilience Modeling with AWS Resilience Hub
 
@@ -314,6 +323,8 @@ Resources are discovered automatically using **tag-based discovery** — all inf
 
 After deployment, trigger a failure mode assessment from the [Resilience Hub console](https://console.aws.amazon.com/resiliencehub). The GenAI-powered assessment evaluates the architecture against the policy targets and generates findings with actionable recommendations aligned to the [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/reliability.html).
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Deployment & Prerequisites
@@ -350,6 +361,8 @@ The deploy script handles everything in order:
 > [!NOTE]
 > **Total deployment time is over 1 hour.** The stack provisions full infrastructure across two regions (VPC, DocumentDB Global Cluster, ECS, Lambda, ARC plans). Grab a coffee.
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Teardown
@@ -373,6 +386,8 @@ python3 deploy.py --teardown --profile my-profile
 
 The teardown script auto-discovers all AirportHub resources by prefix, handles common deletion blockers (VPC endpoint ENIs, ECR images, DocumentDB global cluster ordering), and retries on failure.
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## References
@@ -382,6 +397,8 @@ The teardown script auto-discovers all AirportHub resources by prefix, handles c
 - [ARC Region Switch Plan Trust Policy](https://docs.aws.amazon.com/r53recovery/latest/dg/security_iam_region_switch_trust_policy.html)
 - [DocumentDB Global Cluster Disaster Recovery](https://docs.aws.amazon.com/documentdb/latest/developerguide/global-clusters-disaster-recovery.html)
 - [AWS Well-Architected](https://docs.aws.amazon.com/wellarchitected/latest/framework/reliability.html)
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
