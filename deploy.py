@@ -106,8 +106,9 @@ def show_deployment_plan(config: dict) -> None:
   • CloudFront Distribution
   • CodeBuild project (container image)
   • CloudWatch Dashboard + Alarms
+  • NextGen Resilience Hub (assessment + policy)
 
-[bold cyan]Cross-region:[/bold cyan]
+[bold cyan]Multiple regions:[/bold cyan]
   • FlightAware scheduled-refresh microservice (both regions)
   • ARC Region Switch Plan (automated DR failover)
 """
@@ -146,6 +147,7 @@ def show_deployment_plan(config: dict) -> None:
         print("    • CloudFront Distribution")
         print("    • CodeBuild project (container image)")
         print("    • CloudWatch Dashboard + Alarms")
+        print("    • NextGen Resilience Hub (resilience assessment + policy)")
         print()
         print(f"  {CYAN}us-east-2 (secondary - pilot light):{RESET}")
         print("    • VPC + 4 subnets (2 public, 2 private)")
@@ -155,7 +157,7 @@ def show_deployment_plan(config: dict) -> None:
         print("    • Lambda functions x3 (airports, flights, crew)")
         print("    • CloudWatch Dashboard + Alarms")
         print()
-        print(f"  {CYAN}Cross-region:{RESET}")
+        print(f"  {CYAN}Multiple regions:{RESET}")
         print("    • FlightAware scheduled-refresh microservice (both regions)")
         print("    • ARC Region Switch Plan (automated DR failover)")
         print()

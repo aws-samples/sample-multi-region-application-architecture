@@ -17,7 +17,7 @@ This project demonstrates how to design, deploy, and operate a multi-region AWS 
 4. [Project Structure](#project-structure)
 5. [Resilience Patterns & Design Decisions](#resilience-patterns--design-decisions)
 6. [ARC Region Switch Walkthrough](#arc-region-switch-walkthrough)
-7. [RTO / RPO Targets & Tradeoffs](#rto--rpo-targets--tradeoffs)
+7. [Resilience Modeling with AWS Resilience Hub](#resilience-modeling-with-aws-resilience-hub)
 8. [Deployment & Prerequisites](#deployment--prerequisites)
 9. [Teardown](#teardown)
 10. [References](#references)
@@ -64,6 +64,8 @@ AirportHub is a sample multi-region Airport Operations Dashboard that serves as 
 
 The [FlightAware AeroAPI](https://www.flightaware.com/aeroapi/) key is used for on-demand and scheduled flight data refresh. The deploy script will prompt for the key — press Enter to skip and deploy with the scheduled refresh inactive. For setup details, see [docs/FLIGHTAWARE-API-KEY-GUIDE.md](docs/FLIGHTAWARE-API-KEY-GUIDE.md).
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Architecture Overview
@@ -87,6 +89,8 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 
 > [!NOTE]
 > Cognito is currently deployed in the primary region only and is **not replicated** to us-east-2. AWS now offers [Multi-Region Replication (MRR)](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-multi-region.html) for Cognito User Pools, which creates a replica with shared user directory and Route 53-based automatic failover. In a real-world scenario, you would configure MRR with a Route 53 health check for automatic auth failover.
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -126,6 +130,8 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
     └── generated-diagrams/         #   Architecture diagram PNGs
 ```
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Resilience Patterns & Design Decisions
@@ -140,6 +146,12 @@ Per the [AWS Disaster Recovery Whitepaper](https://docs.aws.amazon.com/whitepape
 
 **Why Pilot Light and not Warm Standby?** Cost. With Pilot Light, the only ongoing secondary cost is the DocumentDB replica. ECS and Lambda in the secondary region cost $0 at idle. Warm Standby would require running ECS tasks continuously — appropriate for stringent RTOs.
 
+### RTO / RPO Targets & Tradeoffs
+
+| Metric | Target | Driver |
+|---|---|---|
+| **RTO** | 15 minutes | DocumentDB switchover (~5–10 min) + ECS startup + human approval gates |
+| **RPO** | 5 minutes | Continuous async replication via DocumentDB Global Cluster; sub-second lag in steady state |
 ### Infrastructure Stacks
 
 The full environment is deployed as a single CloudFormation parent stack (`airporthub-master.yaml`) with nested stacks per layer:
@@ -205,6 +217,8 @@ Rather than a wiki page of manual steps, the entire failover sequence is codifie
 - **Nested plan support** — a child plan (`flightaware-app-switchover`) manages the scheduled data refresh microservice independently, simulating microservice ownership boundaries
 - **Symmetric failover/failback** — the same plan structure handles both directions
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## ARC Region Switch Walkthrough
@@ -261,17 +275,55 @@ aws iam get-role --role-name ROLE_NAME --query 'Role.Arn'
 # Returns: arn:aws:iam::ACCOUNT:role/aws-reserved/sso.amazonaws.com/ROLE_NAME
 ```
 
----
+[↑ Back to top](#table-of-contents)
 
-## RTO / RPO Targets & Tradeoffs
+## Resilience Modeling with AWS Resilience Hub
 
-| Metric | Target | Driver |
-|---|---|---|
-| **RTO** | 15 minutes | DocumentDB switchover (~5–10 min) + ECS startup + human approval gates |
-| **RPO** | Near-zero | Continuous async replication via DocumentDB Global Cluster; sub-second lag in steady state |
+This project integrates [NextGen AWS Resilience Hub](https://docs.aws.amazon.com/resilience-hub/latest/userguide/next-gen.html) to continuously assess the application's resilience posture against defined DR targets. All Resilience Hub resources are deployed as part of the `airporthub-arc-plan` CloudFormation stack.
 
----
+### How It Works
 
+Resilience Hub models the application using a hierarchy of **System → Service → ServiceFunctions**, with a **Policy** defining the resilience targets and a **UserJourney** mapping the critical path.
+
+```
+System: airporthub-resilience-system
+├── Policy: airporthub-resilience-policy (Pilot Light, RTO: 15 min, RPO: 5 min)
+├── UserJourney: airporthub-resilience-journey
+└── Service: airporthub-resilience-service
+    ├── ServiceFunction: airporthub-resilience-frontend (PRIMARY)
+    ├── ServiceFunction: airporthub-resilience-api (PRIMARY)
+    ├── ServiceFunction: airporthub-resilience-database (PRIMARY)
+    └── ServiceFunction: airporthub-resilience-refresh (SUPPLEMENTAL)
+```
+
+### Resilience Policy
+
+| Target | Value | Rationale |
+|--------|-------|-----------|
+| DR Approach | Pilot Light | Matches the active/passive architecture |
+| Multi-Region RTO | 15 minutes | DocumentDB switchover + ECS startup + approval gates |
+| Multi-Region RPO | 5 minutes | DocumentDB Global Cluster async replication |
+
+### Resource Discovery
+
+Resources are discovered automatically using **tag-based discovery** — all infrastructure tagged with `Project: AirportHub` is included in the assessment scope across both regions. No manual resource mapping required.
+
+### Service Functions & Criticality
+
+| Component | Criticality | What It Covers |
+|-----------|-------------|----------------|
+| Frontend | PRIMARY | ECS Fargate tasks, CloudFront distribution |
+| API Layer | PRIMARY | Lambda functions (airports, flights, crew), ALB |
+| Database | PRIMARY | DocumentDB Global Cluster, cross-region replication |
+| Scheduled Refresh | SUPPLEMENTAL | EventBridge rule, FlightAware data refresh Lambda |
+
+**PRIMARY** = application is unavailable without this component. **SUPPLEMENTAL** = application degrades but remains functional (stale data).
+
+### Running an Assessment
+
+After deployment, trigger a failure mode assessment from the [Resilience Hub console](https://console.aws.amazon.com/resiliencehub). The GenAI-powered assessment evaluates the architecture against the policy targets and generates findings with actionable recommendations aligned to the [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/reliability.html).
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
@@ -309,6 +361,8 @@ The deploy script handles everything in order:
 > [!NOTE]
 > **Total deployment time is over 1 hour.** The stack provisions full infrastructure across two regions (VPC, DocumentDB Global Cluster, ECS, Lambda, ARC plans). Grab a coffee.
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## Teardown
@@ -332,6 +386,8 @@ python3 deploy.py --teardown --profile my-profile
 
 The teardown script auto-discovers all AirportHub resources by prefix, handles common deletion blockers (VPC endpoint ENIs, ECR images, DocumentDB global cluster ordering), and retries on failure.
 
+[↑ Back to top](#table-of-contents)
+
 ---
 
 ## References
@@ -341,6 +397,8 @@ The teardown script auto-discovers all AirportHub resources by prefix, handles c
 - [ARC Region Switch Plan Trust Policy](https://docs.aws.amazon.com/r53recovery/latest/dg/security_iam_region_switch_trust_policy.html)
 - [DocumentDB Global Cluster Disaster Recovery](https://docs.aws.amazon.com/documentdb/latest/developerguide/global-clusters-disaster-recovery.html)
 - [AWS Well-Architected](https://docs.aws.amazon.com/wellarchitected/latest/framework/reliability.html)
+
+[↑ Back to top](#table-of-contents)
 
 ---
 
