@@ -396,6 +396,8 @@ The teardown script auto-discovers all AirportHub resources by prefix, handles c
 - [AWS::ARCRegionSwitch::Plan CloudFormation Reference](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/AWS_ARCRegionSwitch.html)
 - [ARC Region Switch Plan Trust Policy](https://docs.aws.amazon.com/r53recovery/latest/dg/security_iam_region_switch_trust_policy.html)
 - [DocumentDB Global Cluster Disaster Recovery](https://docs.aws.amazon.com/documentdb/latest/developerguide/global-clusters-disaster-recovery.html)
+- [Maximizing Multi-Region Resilience with AWS Resilience Hub](https://aws.amazon.com/blogs/mt/maximizing-multi-region-resilience-with-aws-resilience-hub/)
+- [Next generation AWS Resilience Hub](https://docs.aws.amazon.com/resilience-hub/latest/userguide/next-gen.html)
 - [AWS Well-Architected](https://docs.aws.amazon.com/wellarchitected/latest/framework/reliability.html)
 
 [↑ Back to top](#table-of-contents)
