@@ -110,6 +110,7 @@ def show_deployment_plan(config: dict) -> None:
 [bold cyan]Cross-region:[/bold cyan]
   • FlightAware scheduled-refresh microservice (both regions)
   • ARC Region Switch Plan (automated DR failover)
+  • NextGen Resilience Hub (resilience assessment + policy)
 """
 
     if RICH_AVAILABLE and console:
@@ -158,6 +159,7 @@ def show_deployment_plan(config: dict) -> None:
         print(f"  {CYAN}Cross-region:{RESET}")
         print("    • FlightAware scheduled-refresh microservice (both regions)")
         print("    • ARC Region Switch Plan (automated DR failover)")
+        print("    • NextGen Resilience Hub (resilience assessment + policy)")
         print()
 
     # Require explicit acknowledgment before proceeding
