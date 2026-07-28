@@ -160,6 +160,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # S3 Bucket for ARC plan execution reports
@@ -180,6 +182,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # ARC Region Switch Plan
@@ -405,6 +409,7 @@ Resources:
 
       Tags:
         Project: AirportHub
+        resilience-tier: mission-critical
 
   # ============================================================
   # IAM Role for Resilience Hub V2 Assessment
@@ -425,6 +430,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Resilience Hub V2 - System (logical application boundary)
@@ -439,6 +446,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Resilience Hub V2 - Policy (DR targets)
@@ -454,6 +463,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Resilience Hub V2 - User Journey (critical path)
@@ -494,6 +505,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Resilience Hub V2 - Service Functions (logical components)

@@ -34,6 +34,8 @@ Resources:
           Value: !Sub '${StackPrefix}-vpc'
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Internet Gateway - allows public subnets to reach the internet
@@ -44,6 +46,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-igw'
+        - Key: resilience-tier
+          Value: mission-critical
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -65,6 +69,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-public-1'
+        - Key: resilience-tier
+          Value: mission-critical
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -76,6 +82,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-public-2'
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Private Subnets - for ECS tasks, Lambda functions, DocumentDB
@@ -89,6 +97,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-private-1'
+        - Key: resilience-tier
+          Value: mission-critical
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
@@ -99,6 +109,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-private-2'
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # NAT Gateways - 2 for HA (one per AZ)
@@ -112,6 +124,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-nat-eip-1'
+        - Key: resilience-tier
+          Value: mission-critical
 
   NatEip2:
     Type: AWS::EC2::EIP
@@ -121,6 +135,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-nat-eip-2'
+        - Key: resilience-tier
+          Value: mission-critical
 
   NatGateway1:
     Type: AWS::EC2::NatGateway
@@ -130,6 +146,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-nat-1'
+        - Key: resilience-tier
+          Value: mission-critical
 
   NatGateway2:
     Type: AWS::EC2::NatGateway
@@ -139,6 +157,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-nat-2'
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Route Tables
@@ -152,6 +172,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-public-rt'
+        - Key: resilience-tier
+          Value: mission-critical
 
   PublicRoute:
     Type: AWS::EC2::Route
@@ -181,6 +203,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-private-rt-1'
+        - Key: resilience-tier
+          Value: mission-critical
 
   PrivateRoute1:
     Type: AWS::EC2::Route
@@ -203,6 +227,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-private-rt-2'
+        - Key: resilience-tier
+          Value: mission-critical
 
   PrivateRoute2:
     Type: AWS::EC2::Route
@@ -240,6 +266,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-alb-sg'
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ECS - accepts traffic from ALB on port 5000 (Flask), outbound to DocDB + AWS APIs
   EcsSecurityGroup:
@@ -260,6 +288,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-ecs-sg'
+        - Key: resilience-tier
+          Value: mission-critical
 
   # Lambda - no inbound, outbound to DocDB + AWS APIs
   LambdaSecurityGroup:
@@ -274,6 +304,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-lambda-sg'
+        - Key: resilience-tier
+          Value: mission-critical
 
   # DocumentDB - accepts connections from ECS and Lambda on port 27017
   DocDbSecurityGroup:
@@ -299,6 +331,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-docdb-sg'
+        - Key: resilience-tier
+          Value: mission-critical
 
   # VPC Endpoints - accepts HTTPS from ECS and Lambda
   VpcEndpointSecurityGroup:
@@ -324,6 +358,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${StackPrefix}-vpce-sg'
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # VPC Endpoints - reduce NAT traffic and improve latency

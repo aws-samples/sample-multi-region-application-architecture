@@ -57,7 +57,7 @@ Resources:
         AllowAdminCreateUserOnly: true
       UserPoolTags:
         Project: AirportHub
-        Owner: !Ref StackPrefix
+        resilience-tier: mission-critical
 
   # App Client - SRP auth flow, no client secret (public web app)
   UserPoolClient:

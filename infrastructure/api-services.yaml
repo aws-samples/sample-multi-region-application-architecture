@@ -104,6 +104,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   AirportPermission:
     Type: AWS::Lambda::Permission
@@ -166,6 +168,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   FlightsPermission:
     Type: AWS::Lambda::Permission
@@ -227,6 +231,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   CrewPermission:
     Type: AWS::Lambda::Permission
@@ -309,6 +315,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   DataSeedCustomResource:
     Type: Custom::DataSeed

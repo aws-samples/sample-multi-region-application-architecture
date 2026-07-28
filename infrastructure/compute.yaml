@@ -83,6 +83,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ECR Replication - automatically copies images to secondary region
   # This is an account-level setting; only created in primary region
@@ -121,6 +123,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # CloudWatch Log Group - 90 day retention (SECURITY-14)
@@ -338,6 +342,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -433,8 +439,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
-        - Key: Region
-          Value: !Ref 'AWS::Region'
+        - Key: resilience-tier
+          Value: mission-critical
 
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
@@ -556,6 +562,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # CodeBuild - builds container from source, pushes to ECR
@@ -650,6 +658,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # Custom Resource Lambda to trigger CodeBuild
   CodeBuildTriggerRole:
@@ -749,6 +759,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # ARC Helper Lambda: CloudFront origin switch - REMOVED
@@ -817,6 +829,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
 Outputs:
   EcsClusterArn:

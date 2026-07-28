@@ -92,6 +92,8 @@ Resources:
           Value: AirportHub
         - Key: Component
           Value: network
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Child Stack: Auth (primary region only)
@@ -109,6 +111,8 @@ Resources:
           Value: AirportHub
         - Key: Component
           Value: auth
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Placeholder: DatabaseStack (Unit 2)
@@ -131,6 +135,8 @@ Resources:
           Value: AirportHub
         - Key: Component
           Value: database
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Placeholder: ComputeStack (Unit 3)
@@ -164,6 +170,8 @@ Resources:
           Value: AirportHub
         - Key: Component
           Value: compute
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # CodeBuild Trigger - runs after ComputeStack creates the project
@@ -210,6 +218,8 @@ Resources:
           Value: AirportHub
         - Key: Component
           Value: api-services
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Placeholder: ObservabilityStack (Unit 4)
@@ -239,6 +249,8 @@ Resources:
           Value: AirportHub
         - Key: Component
           Value: observability
+        - Key: resilience-tier
+          Value: mission-critical
 
 # ============================================================
 # Outputs - consumed by deploy script and ARC plan

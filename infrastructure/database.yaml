@@ -58,6 +58,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Secrets Manager - stores DocumentDB credentials
@@ -80,6 +82,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Global Cluster - created in primary region only
@@ -97,6 +101,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Regional Cluster
@@ -121,6 +127,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   RegionalCluster:
     Type: AWS::DocDB::DBCluster
@@ -160,6 +168,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Instances - 2 per region for multi-AZ
@@ -174,6 +184,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   Instance2:
     Type: AWS::DocDB::DBInstance
@@ -186,6 +198,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   # ============================================================
   # Custom Resource: Join secondary cluster to global cluster
@@ -237,6 +251,8 @@ Resources:
       Tags:
         - Key: Project
           Value: AirportHub
+        - Key: resilience-tier
+          Value: mission-critical
 
   GlobalClusterJoinCustomResource:
     Type: Custom::GlobalClusterJoin
