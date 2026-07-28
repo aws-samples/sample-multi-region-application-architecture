@@ -379,6 +379,9 @@ python3 deploy.py --teardown --profile my-profile
 
 The teardown script auto-discovers all AirportHub resources by prefix, handles common deletion blockers (VPC endpoint ENIs, ECR images, DocumentDB global cluster ordering), and retries on failure.
 
+> [!TIP]
+> Teardown taking too long to babysit? Use Kiro `/goal run teardown.py --profile my-profile --yes and retry on failures` — it handles the full multi-region cleanup autonomously.
+
 [↑ Back to top](#table-of-contents)
 
 
