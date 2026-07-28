@@ -7,7 +7,6 @@ A production-style reference implementation for building and operating a **Pilot
 
 This project demonstrates how to design, deploy, and operate a multi-region AWS application with built-in disaster recovery — using an Airport Operations Dashboard called AirportHub as a realistic, tangible example. The focus is on the **resilience patterns**, not the application itself.
 
----
 
 ## Table of Contents
 
@@ -24,7 +23,6 @@ This project demonstrates how to design, deploy, and operate a multi-region AWS 
 11. [Security](#security)
 12. [Contributing](#contributing)
 
----
 
 ## Why This Exists
 
@@ -36,7 +34,6 @@ This is a hands-on reference for teams who want to understand:
 - How [AWS ARC Region Switch](https://docs.aws.amazon.com/r53recovery/latest/dg/what-is-route53-recovery.html) orchestrates failover across multiple microservices and third-party dependencies.
 - How to keep secondary region compute costs near zero while still achieving a low RTO
 
----
 
 ## AirportHub — The Example Application
 
@@ -66,7 +63,6 @@ The [FlightAware AeroAPI](https://www.flightaware.com/aeroapi/) key is used for 
 
 [↑ Back to top](#table-of-contents)
 
----
 
 ## Architecture Overview
 
@@ -75,7 +71,6 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 
 *Click the diagram to view full screen.*
 
----
 
 | | us-east-1 (Primary) | us-east-2 (Pilot Light) |
 |---|---|---|
@@ -92,7 +87,6 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 
 [↑ Back to top](#table-of-contents)
 
----
 
 ## Project Structure
 
@@ -101,6 +95,7 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 ├── airporthub-master.yaml          # CloudFormation parent stack (orchestrates all nested stacks)
 ├── deploy.py                       # Interactive deploy script
 ├── teardown.py                     # Standalone teardown script (handles failures, retries)
+├── requirements.txt                # Python dependencies for deploy/teardown scripts
 ├── infrastructure/                 # CloudFormation nested stack templates
 │   ├── network.yaml                #   VPC, subnets, NAT, security groups, VPC endpoints
 │   ├── auth.yaml                   #   Cognito User Pool + App Client
@@ -108,10 +103,11 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 │   ├── compute.yaml                #   ECS Fargate, ALB, ECR, CodeBuild, CloudFront
 │   ├── api-services.yaml           #   Lambda functions (airports, flights, crew) + ALB rules
 │   ├── observability.yaml          #   CloudWatch dashboard + alarms
-│   └── arc-region-switch-plan.yaml #   ARC Region Switch DR plan
+│   └── arc-region-switch-plan.yaml #   ARC Region Switch DR plan + Resilience Hub
 ├── app/                            # ECS Flask application (serves React + proxies to DocumentDB)
 │   ├── app.py
 │   ├── auth.py
+│   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/                       # React SPA (Vite + TypeScript + Tailwind)
 ├── airport-service/                # Lambda: airport CRUD operations
@@ -119,7 +115,8 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 ├── crew-service/                   # Lambda: crew management (pilots, FAs, assignments)
 ├── scheduled-refresh-microservice/ # Lambda: EventBridge-triggered FlightAware refresh
 ├── custom-resources/               # CloudFormation custom resource Lambdas
-│   └── data-seed/                  #   Seeds initial airport data on stack CREATE
+│   ├── data-seed/                  #   Seeds initial airport + crew data on stack CREATE
+│   └── global-cluster-join/        #   Joins secondary DocDB cluster to global cluster
 ├── data/                           # Static data files
 │   ├── airport_data_generator.py   #   Generates seed airport JSON
 │   └── global-bundle.pem           #   DocumentDB TLS CA bundle
@@ -132,7 +129,6 @@ The application is deployed across **two AWS regions (us-east-1 & us-east-2)** u
 
 [↑ Back to top](#table-of-contents)
 
----
 
 ## Resilience Patterns & Design Decisions
 
@@ -219,7 +215,6 @@ Rather than a wiki page of manual steps, the entire failover sequence is codifie
 
 [↑ Back to top](#table-of-contents)
 
----
 
 ## ARC Region Switch Walkthrough
 
@@ -325,7 +320,6 @@ After deployment, trigger a failure mode assessment from the [Resilience Hub con
 
 [↑ Back to top](#table-of-contents)
 
----
 
 ## Deployment & Prerequisites
 
@@ -363,7 +357,6 @@ The deploy script handles everything in order:
 
 [↑ Back to top](#table-of-contents)
 
----
 
 ## Teardown
 
@@ -388,7 +381,6 @@ The teardown script auto-discovers all AirportHub resources by prefix, handles c
 
 [↑ Back to top](#table-of-contents)
 
----
 
 ## References
 
@@ -402,7 +394,6 @@ The teardown script auto-discovers all AirportHub resources by prefix, handles c
 
 [↑ Back to top](#table-of-contents)
 
----
 
 ## Security
 
