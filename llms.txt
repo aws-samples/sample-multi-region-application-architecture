@@ -1,0 +1,59 @@
+# Multi-Region Sample Application Architecture
+
+> A Pilot Light DR reference implementation using AWS ARC Region Switch, demonstrated through an Airport Operations Dashboard (AirportHub).
+
+Multi-region active/passive architecture across us-east-1 and us-east-2. CloudFormation nested stacks (not CDK/SAM). Python Lambda microservices with DocumentDB backend. React/Vite/TypeScript frontend on ECS Fargate + CloudFront. ARC Region Switch for orchestrated failover. StackPrefix: `airporthub`.
+
+Key resilience patterns: DocumentDB Global Cluster with continuous async replication, CloudFront origin group failover for reads, ECS Fargate scaled to zero in secondary region (Pilot Light), and a 6-step ARC Region Switch plan with human approval gates. RTO target: 15 minutes. RPO target: 5 minutes.
+
+## Docs
+
+- [README.md](README.md): Full architecture overview, deployment, failover walkthrough, and project structure
+- [docs/openapi.yaml](docs/openapi.yaml): OpenAPI 3.0 API specification for all endpoints
+- [docs/Region-Switch-Failover.md](docs/Region-Switch-Failover.md): Failover operations runbook (ARC Region Switch)
+- [docs/FLIGHTAWARE-API-KEY-GUIDE.md](docs/FLIGHTAWARE-API-KEY-GUIDE.md): FlightAware API key setup instructions
+
+## Infrastructure
+
+- [airporthub-master.yaml](airporthub-master.yaml): CloudFormation parent stack orchestrating all nested stacks
+- [infrastructure/network.yaml](infrastructure/network.yaml): VPC, subnets, NAT, security groups, VPC endpoints
+- [infrastructure/auth.yaml](infrastructure/auth.yaml): Cognito User Pool + App Client
+- [infrastructure/database.yaml](infrastructure/database.yaml): DocumentDB Global Cluster + regional clusters
+- [infrastructure/compute.yaml](infrastructure/compute.yaml): ECS Fargate, ALB, ECR, CodeBuild, CloudFront
+- [infrastructure/api-services.yaml](infrastructure/api-services.yaml): Lambda functions (airports, flights, crew) + ALB rules
+- [infrastructure/observability.yaml](infrastructure/observability.yaml): CloudWatch dashboard + alarms
+- [infrastructure/arc-region-switch-plan.yaml](infrastructure/arc-region-switch-plan.yaml): ARC Region Switch DR plan + Resilience Hub
+
+## Backend Services
+
+- [airport-service/lambda_function.py](airport-service/lambda_function.py): Lambda handler for airport CRUD operations
+- [airport-service/auth.py](airport-service/auth.py): JWT token validation for airport service
+- [flights-service/lambda_function.py](flights-service/lambda_function.py): Lambda handler for flight data + FlightAware integration
+- [flights-service/flightaware_client.py](flights-service/flightaware_client.py): FlightAware AeroAPI client wrapper
+- [flights-service/flight_data_generator.py](flights-service/flight_data_generator.py): Generates mock flight data when FlightAware is unavailable
+- [crew-service/lambda_function.py](crew-service/lambda_function.py): Lambda handler for crew management (pilots, FAs, assignments)
+- [crew-service/auth.py](crew-service/auth.py): JWT token validation for crew service
+- [scheduled-refresh-microservice/lambda_function.py](scheduled-refresh-microservice/lambda_function.py): EventBridge-triggered Lambda for hourly FlightAware data refresh
+- [scheduled-refresh-microservice/flightaware_client.py](scheduled-refresh-microservice/flightaware_client.py): FlightAware client for scheduled refresh
+- [scheduled-refresh-microservice/flightaware-app-switchover.yaml](scheduled-refresh-microservice/flightaware-app-switchover.yaml): ARC nested plan for FlightAware schedule toggle
+
+## Custom Resources
+
+- [custom-resources/data-seed/](custom-resources/data-seed/): CloudFormation custom resource that seeds initial airport + crew data on stack CREATE
+- [custom-resources/global-cluster-join/](custom-resources/global-cluster-join/): CloudFormation custom resource that joins secondary DocDB cluster to global cluster
+
+## Frontend
+
+- [frontend/package.json](frontend/package.json): React SPA dependencies and scripts (Vite + TypeScript + Tailwind)
+- [frontend/vite.config.ts](frontend/vite.config.ts): Vite build configuration
+- [frontend/src/](frontend/src/): React components, pages, and application logic
+- [app/app.py](app/app.py): ECS Flask application serving React build + proxying API calls to DocumentDB
+- [app/auth.py](app/auth.py): Auth middleware for the Flask application
+- [app/Dockerfile](app/Dockerfile): Container definition for ECS Fargate deployment
+
+## Deployment
+
+- [deploy.py](deploy.py): Interactive multi-region deploy script (handles both regions, CodeBuild, ARC plan)
+- [teardown.py](teardown.py): Multi-region teardown with retry logic and common blocker handling
+- [requirements.txt](requirements.txt): Python dependencies for deploy/teardown scripts
+- [data/airport_data_generator.py](data/airport_data_generator.py): Generates seed airport JSON data
